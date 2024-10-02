@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+constexpr const char *WINDOW_NAME = "Boundary Conditions Editor";
+
 class EditorWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -31,14 +33,17 @@ private:
     void prepareMenus();
 
 private slots:
-    void updateTitleText(const std::string_view &sv) const;
+    void updateTitleText(const std::string_view &sv);
 
     // Slots which will be executed upon
     // QAction trigger.
-    void openFile();
+    void openFile(const std::string_view &filename);
     void closeFile();
     void filter();
     void recalculateProject();
     void exportFile();
     void quit();
+
+signals:
+    void fileOpened(const std::string_view &filename);
 };

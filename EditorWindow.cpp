@@ -8,12 +8,15 @@
 EditorWindow::EditorWindow(QWidget *parent) {
     prepareInternalActions();
     prepareMenus();
+
+    connect(this, &EditorWindow::fileOpened, this, &EditorWindow::updateTitleText);
 }
 
 EditorWindow::~EditorWindow() {}
 
-void EditorWindow::updateTitleText(const std::string_view &sv) const {
-    std::cout << "Not implemented.\n";
+void EditorWindow::updateTitleText(const std::string_view &sv) {
+    const std::string updatedTitle = std::string(WINDOW_NAME) + std::string(" | ") + std::string(sv);
+    this->setWindowTitle(updatedTitle.c_str());
 }
 
 void EditorWindow::openFile() {}
