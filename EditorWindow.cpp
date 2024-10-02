@@ -1,15 +1,18 @@
 #include "./EditorWindow.hpp"
 
+#include <QFileDialog>
 #include <QMenu>
 #include <QMenuBar>
-
-#include <iostream>
+#include <QMessageBox>
+#include <QStandardPaths>
 
 EditorWindow::EditorWindow(QWidget *parent) {
     prepareInternalActions();
     prepareMenus();
 
     connect(this, &EditorWindow::fileOpened, this, &EditorWindow::updateTitleText);
+
+    m_cache = std::make_unique<json>();
 }
 
 EditorWindow::~EditorWindow() {}
@@ -19,7 +22,35 @@ void EditorWindow::updateTitleText(const std::string_view &sv) {
     this->setWindowTitle(updatedTitle.c_str());
 }
 
-void EditorWindow::openFile() {}
+void EditorWindow::selectAndOpenFile() {
+    if (m_fileCurrentlyOpened) {
+        cleanupJsonCache();
+        m_inputFilestream.close();
+    }
+
+    m_filename = QFileDialog::getOpenFileName(
+        this,
+        tr("Open file"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+        tr("Fidesys Case Files (*.fc);;All files (*.*)")
+    ).toStdString();
+    m_inputFilestream = std::ifstream(m_filename);
+
+    if (m_inputFilestream.good()) {
+        emit fileOpened(m_filename);
+        m_fileCurrentlyOpened = true;
+
+        *m_cache = json::parse(m_inputFilestream);
+    }
+    else {
+        QMessageBox badFileAlert;
+        badFileAlert.setText(tr("The selected file could not be opened due to read error. Try selecting another file or checking the selected file integrity."));
+        badFileAlert.setStandardButtons(QMessageBox::Ok);
+        badFileAlert.exec();
+
+        m_inputFilestream.close();
+    }
+}
 void EditorWindow::closeFile() {}
 void EditorWindow::filter() {}
 void EditorWindow::recalculateProject() {}
@@ -29,6 +60,7 @@ void EditorWindow::quit() {}
 void EditorWindow::prepareInternalActions() {
     m_openFileAct = std::make_shared<QAction>();
     m_openFileAct->setText(tr("&Open file"));
+    connect(m_openFileAct.get(), &QAction::triggered, this, &EditorWindow::selectAndOpenFile);
 
     m_closeFileAct = std::make_shared<QAction>();
     m_closeFileAct->setText(tr("&Close"));
@@ -58,4 +90,8 @@ void EditorWindow::prepareMenus() {
 
     m_projectMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&Project")));
     m_projectMenu->addAction(m_recalculateProjectAct.get());
+}
+
+void EditorWindow::cleanupJsonCache() {
+    m_cache.reset();
 }
