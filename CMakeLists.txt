@@ -16,11 +16,19 @@ find_package(nlohmann_json REQUIRED)
 set(SRC_DIR "src/")
 set(INCLUDE_DIR "include/")
 
-set(PROJECT_SOURCES
-    ${SRC_DIR}/main.cpp
-    ${SRC_DIR}/EditorWindow.cpp
+file(GLOB headers
+    LIST_DIRECTORIES FALSE
+    "${INCLUDE_DIR}/*.hpp"
+)
+file(GLOB sources
+    LIST_DIRECTORIES FALSE
+    "${SRC_DIR}/*.cpp"
+)
 
-    ${INCLUDE_DIR}/EditorWindow.hpp
+set(PROJECT_SOURCES
+    ${sources}
+
+    ${headers}
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
