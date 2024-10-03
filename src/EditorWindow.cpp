@@ -34,21 +34,24 @@ void EditorWindow::selectAndOpenFile() {
         QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
         tr("Fidesys Case Files (*.fc);;All files (*.*)")
     ).toStdString();
-    m_inputFilestream = std::ifstream(m_filename);
 
-    if (m_inputFilestream.good()) {
-        emit fileOpened(m_filename);
-        m_fileCurrentlyOpened = true;
+    if (!m_filename.empty()) {
+        m_inputFilestream = std::ifstream(m_filename);
 
-        *m_cache = json::parse(m_inputFilestream);
-    }
-    else {
-        QMessageBox badFileAlert;
-        badFileAlert.setText(tr("The selected file could not be opened due to read error. Try selecting another file or checking the selected file integrity."));
-        badFileAlert.setStandardButtons(QMessageBox::Ok);
-        badFileAlert.exec();
+        if (m_inputFilestream.good()) {
+            emit fileOpened(m_filename);
+            m_fileCurrentlyOpened = true;
 
-        m_inputFilestream.close();
+            *m_cache = json::parse(m_inputFilestream);
+        }
+        else {
+            QMessageBox badFileAlert;
+            badFileAlert.setText(tr("The selected file could not be opened due to read error. Try selecting another file or checking the selected file integrity."));
+            badFileAlert.setStandardButtons(QMessageBox::Ok);
+            badFileAlert.exec();
+
+            m_inputFilestream.close();
+        }
     }
 }
 void EditorWindow::closeFile() {}
