@@ -13,10 +13,14 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(nlohmann_json REQUIRED)
 
+set(SRC_DIR "src/")
+set(INCLUDE_DIR "include/")
+
 set(PROJECT_SOURCES
-        main.cpp
-        EditorWindow.cpp
-        EditorWindow.hpp
+    ${SRC_DIR}/main.cpp
+    ${SRC_DIR}/EditorWindow.cpp
+
+    ${INCLUDE_DIR}/EditorWindow.hpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

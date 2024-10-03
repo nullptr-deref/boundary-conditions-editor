@@ -1,4 +1,4 @@
-#include "EditorWindow.hpp"
+#include "../include/EditorWindow.hpp"
 
 #include <QApplication>
 
