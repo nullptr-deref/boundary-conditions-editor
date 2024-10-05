@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bc/BoundaryConditionsParser.hpp"
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -39,9 +41,7 @@ private:
     void prepareMenus();
 
     void cleanupJsonCache();
-    std::unique_ptr<json> m_cache = nullptr;
-
-    std::vector<JsonProxy>
+    BoundaryConditionsParser m_parser = BoundaryConditionsParser({});
 
     bool m_fileCurrentlyOpened = false;
 

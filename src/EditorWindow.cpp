@@ -11,8 +11,38 @@ EditorWindow::EditorWindow(QWidget *parent) {
     prepareMenus();
 
     connect(this, &EditorWindow::fileOpened, this, &EditorWindow::updateTitleText);
+    //json load_obj = json::parse("\
+    //  {\
+    //     \"apply_to\" : \
+    //     [\
+    //        [ 1005, 4 ],\
+    //        [ 1007, 4 ],\
+    //        [ 1001, 4 ],\
+    //        [ 1003, 4 ]\
+    //     ],\
+    //     \"apply_to_size\" : 4,\
+    //     \"cs\" : 1,\
+    //     \"data\" : \
+    //     [\
+    //        [ 3.5355339059327373 ],\
+    //        [ 3.5355339059327373 ],\
+    //        [ 0.0 ],\
+    //        [ 0.0 ],\
+    //        [ 0.0 ],\
+    //        [ 0.0 ]\
+    //     ],\
+    //     \"dep_var_num\" : [ \"\", \"\", \"\", \"\", \"\", \"\" ],\
+    //     \"dep_var_size\" : [ 0, 0, 0, 0, 0, 0 ],\
+    //     \"dependency_type\" : [ 0, 0, 0, 0, 0, 0 ],\
+    //     \"id\" : 1,\
+    //     \"name\" : \"distributed force\",\
+    //     \"type\" : 35\
+    //  }");
 
-    m_cache = std::make_unique<json>();
+    //auto load = Load();
+    //load.deserialize(load_obj);
+
+    //std::clog << load;
 }
 
 EditorWindow::~EditorWindow() {}
@@ -39,10 +69,19 @@ void EditorWindow::selectAndOpenFile() {
         m_inputFilestream = std::ifstream(m_filename);
 
         if (m_inputFilestream.good()) {
-            emit fileOpened(m_filename);
-            m_fileCurrentlyOpened = true;
+            try {
+                auto parsedJSON = json::parse(m_inputFilestream);
+                m_parser.setJSON(parsedJSON);
+                m_fileCurrentlyOpened = true;
 
-            *m_cache = json::parse(m_inputFilestream);
+                emit fileOpened(m_filename);
+            }
+            catch (json::exception &e) {
+                QMessageBox alert;
+                alert.setText(tr("The selected file is of unsupported format. Try opening another file."));
+                alert.setStandardButtons(QMessageBox::Ok);
+                alert.exec();
+            }
         }
         else {
             QMessageBox badFileAlert;
@@ -98,5 +137,5 @@ void EditorWindow::prepareMenus() {
 }
 
 void EditorWindow::cleanupJsonCache() {
-    m_cache.reset();
+    m_parser.setJSON({});
 }

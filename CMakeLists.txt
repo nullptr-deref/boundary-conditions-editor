@@ -16,18 +16,17 @@ find_package(nlohmann_json REQUIRED)
 set(SRC_DIR "src/")
 set(INCLUDE_DIR "include/")
 
-file(GLOB headers
+file(GLOB_RECURSE headers
     LIST_DIRECTORIES FALSE
     "${INCLUDE_DIR}/*.hpp"
 )
-file(GLOB sources
+file(GLOB_RECURSE sources
     LIST_DIRECTORIES FALSE
     "${SRC_DIR}/*.cpp"
 )
 
 set(PROJECT_SOURCES
     ${sources}
-
     ${headers}
 )
 
