@@ -54,6 +54,7 @@ void EditorWindow::selectAndOpenFile() {
         }
     }
 }
+
 void EditorWindow::closeFile() {}
 void EditorWindow::filter() {}
 void EditorWindow::recalculateProject() {}
@@ -61,38 +62,39 @@ void EditorWindow::exportFile() {}
 void EditorWindow::quit() {}
 
 void EditorWindow::prepareInternalActions() {
-    m_openFileAct = std::make_shared<QAction>();
-    m_openFileAct->setText(tr("&Open file"));
-    connect(m_openFileAct.get(), &QAction::triggered, this, &EditorWindow::selectAndOpenFile);
+    m_openFileAction = std::make_shared<QAction>();
+    m_openFileAction->setText(tr("&Open file"));
+    connect(m_openFileAction.get(), &QAction::triggered, this, &EditorWindow::selectAndOpenFile);
 
-    m_closeFileAct = std::make_shared<QAction>();
-    m_closeFileAct->setText(tr("&Close"));
+    m_closeFileAction = std::make_shared<QAction>();
+    m_closeFileAction->setText(tr("&Close"));
 
-    m_filterAct = std::make_shared<QAction>();
-    m_filterAct->setText(tr("&Filter"));
+    m_filterAction = std::make_shared<QAction>();
+    m_filterAction->setText(tr("&Filter"));
 
-    m_recalculateProjectAct = std::make_shared<QAction>();
-    m_recalculateProjectAct->setText(tr("&Recalculate project"));
+    m_recalculateProjectAction = std::make_shared<QAction>();
+    m_recalculateProjectAction->setText(tr("&Recalculate project"));
 
-    m_exportFileAct = std::make_shared<QAction>();
-    m_exportFileAct->setText(tr("&Export"));
+    m_exportFileAction = std::make_shared<QAction>();
+    m_exportFileAction->setText(tr("&Export"));
 
-    m_quitAct = std::make_shared<QAction>();
-    m_quitAct->setText(tr("&Quit"));
+    m_quitAction = std::make_shared<QAction>();
+    m_quitAction->setText(tr("&Quit"));
 }
 
 void EditorWindow::prepareMenus() {
     m_fileMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&File")));
-    m_fileMenu->addAction(m_openFileAct.get());
-    m_fileMenu->addAction(m_exportFileAct.get());
+    m_fileMenu->addAction(m_openFileAction.get());
+    m_fileMenu->addAction(m_exportFileAction.get());
+    m_fileMenu->addAction(m_closeFileAction.get());
     m_fileMenu->addSeparator();
-    m_fileMenu->addAction(m_closeFileAct.get());
+    m_fileMenu->addAction(m_quitAction.get());
 
     m_viewMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&View")));
-    m_viewMenu->addAction(m_filterAct.get());
+    m_viewMenu->addAction(m_filterAction.get());
 
     m_projectMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&Project")));
-    m_projectMenu->addAction(m_recalculateProjectAct.get());
+    m_projectMenu->addAction(m_recalculateProjectAction.get());
 }
 
 void EditorWindow::cleanupJsonCache() {

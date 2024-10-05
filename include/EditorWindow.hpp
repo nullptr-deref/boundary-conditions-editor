@@ -24,12 +24,12 @@ private:
     std::ifstream m_inputFilestream;
     std::ifstream m_exportFilestream;
 
-    std::shared_ptr<QAction> m_openFileAct = nullptr;
-    std::shared_ptr<QAction> m_closeFileAct = nullptr;
-    std::shared_ptr<QAction> m_filterAct = nullptr;
-    std::shared_ptr<QAction> m_recalculateProjectAct = nullptr;
-    std::shared_ptr<QAction> m_exportFileAct = nullptr;
-    std::shared_ptr<QAction> m_quitAct = nullptr;
+    std::shared_ptr<QAction> m_openFileAction = nullptr;
+    std::shared_ptr<QAction> m_closeFileAction = nullptr;
+    std::shared_ptr<QAction> m_filterAction = nullptr;
+    std::shared_ptr<QAction> m_recalculateProjectAction = nullptr;
+    std::shared_ptr<QAction> m_exportFileAction = nullptr;
+    std::shared_ptr<QAction> m_quitAction = nullptr;
 
     std::shared_ptr<QMenu> m_fileMenu = nullptr;
     std::shared_ptr<QMenu> m_viewMenu = nullptr;
@@ -40,6 +40,8 @@ private:
 
     void cleanupJsonCache();
     std::unique_ptr<json> m_cache = nullptr;
+
+    std::vector<JsonProxy>
 
     bool m_fileCurrentlyOpened = false;
 
