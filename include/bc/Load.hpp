@@ -5,11 +5,12 @@
 #include <array>
 #include <iostream>
 
+// Seems like commented out types of loads are not supported in non-binary export.
 enum struct LoadType : uint32_t {
-    FacePressure = 1,
-    EdgePressure = 2,
-    DeadPointForce = 6,
-    EdgeDistributedForce = 32,
+    FacePressure = 3,
+    // EdgePressure = 2,
+    DeadPointForce = 5, // for some reason no matter which mode I select dead point force is always node force
+    // EdgeDistributedForce = 32,
     FaceDistributedForce = 35
 };
 

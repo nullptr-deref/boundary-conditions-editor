@@ -6,43 +6,13 @@
 #include <QMessageBox>
 #include <QStandardPaths>
 
+#include <iostream>
+
 EditorWindow::EditorWindow(QWidget *parent) {
     prepareInternalActions();
     prepareMenus();
 
     connect(this, &EditorWindow::fileOpened, this, &EditorWindow::updateTitleText);
-    //json load_obj = json::parse("\
-    //  {\
-    //     \"apply_to\" : \
-    //     [\
-    //        [ 1005, 4 ],\
-    //        [ 1007, 4 ],\
-    //        [ 1001, 4 ],\
-    //        [ 1003, 4 ]\
-    //     ],\
-    //     \"apply_to_size\" : 4,\
-    //     \"cs\" : 1,\
-    //     \"data\" : \
-    //     [\
-    //        [ 3.5355339059327373 ],\
-    //        [ 3.5355339059327373 ],\
-    //        [ 0.0 ],\
-    //        [ 0.0 ],\
-    //        [ 0.0 ],\
-    //        [ 0.0 ]\
-    //     ],\
-    //     \"dep_var_num\" : [ \"\", \"\", \"\", \"\", \"\", \"\" ],\
-    //     \"dep_var_size\" : [ 0, 0, 0, 0, 0, 0 ],\
-    //     \"dependency_type\" : [ 0, 0, 0, 0, 0, 0 ],\
-    //     \"id\" : 1,\
-    //     \"name\" : \"distributed force\",\
-    //     \"type\" : 35\
-    //  }");
-
-    //auto load = Load();
-    //load.deserialize(load_obj);
-
-    //std::clog << load;
 }
 
 EditorWindow::~EditorWindow() {}
@@ -72,13 +42,15 @@ void EditorWindow::selectAndOpenFile() {
             try {
                 auto parsedJSON = json::parse(m_inputFilestream);
                 m_parser.setJSON(parsedJSON);
+                [[maybe_unused]] auto bcs = m_parser.parse();
                 m_fileCurrentlyOpened = true;
 
                 emit fileOpened(m_filename);
             }
-            catch (json::exception &e) {
+            catch (const json::exception &e) {
+                std::clog << e.what() << '\n';
                 QMessageBox alert;
-                alert.setText(tr("The selected file is of unsupported format. Try opening another file."));
+                alert.setText(tr("The selected file is of unsupported format or ill-formed. Try opening another file."));
                 alert.setStandardButtons(QMessageBox::Ok);
                 alert.exec();
             }

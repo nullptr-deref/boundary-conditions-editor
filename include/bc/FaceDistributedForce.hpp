@@ -4,10 +4,10 @@
 
 #include <array>
 
-class DeadPointForce : public Load {
+class FaceDistributedForce : public Load {
 public:
-    DeadPointForce();
-    DeadPointForce(const std::array<double, 6> &projections);
+    FaceDistributedForce();
+    FaceDistributedForce(const std::array<double, 6> &projections);
 
     void deserialize(const json &object) override;
     json serialize() const override;

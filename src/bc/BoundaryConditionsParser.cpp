@@ -1,10 +1,18 @@
 #include "../../include/bc/BoundaryConditionsParser.hpp"
 
-BoundaryConditionsParser::BoundaryConditionsParser(const json &object)
-: m_object(std::move(std::make_unique<json>(object))) {
+#include "../../include/bc/DeadPointForce.hpp"
+#include "../../include/bc/FaceDistributedForce.hpp"
+#include "../../include/bc/FacePressure.hpp"
+
+BoundaryConditionsParser::BoundaryConditionsParser(const nlohmann::json &object)
+: m_object(std::move(std::make_unique<nlohmann::json>(object))) {
     m_boundaryConditions = parse();
 }
 
+/*
+ * Parses boundary conditions from the underlying JSON object.
+ * Fills private list with parsed data and returns its copy.
+ */
 std::vector<BoundaryCondition *> BoundaryConditionsParser::parse() {
     if (!m_object->empty()) {
         std::vector<BoundaryCondition *> bcs;
@@ -15,22 +23,28 @@ std::vector<BoundaryCondition *> BoundaryConditionsParser::parse() {
                     force->deserialize(obj);
                     bcs.push_back(dynamic_cast<BoundaryCondition *>(force));
                 } break;
-                case static_cast<uint32_t>(LoadType::FacePressure):
-                case static_cast<uint32_t>(LoadType::EdgePressure):
-                break;
-                case static_cast<uint32_t>(LoadType::EdgeDistributedForce):
-                case static_cast<uint32_t>(LoadType::FaceDistributedForce):
-                break;
+                case static_cast<uint32_t>(LoadType::FacePressure): {
+                    auto *pressure = new FacePressure();
+                    pressure->deserialize(obj);
+                    bcs.push_back(dynamic_cast<BoundaryCondition *>(pressure));
+                } break;
+                case static_cast<uint32_t>(LoadType::FaceDistributedForce): {
+                    auto *distributedForce = new FaceDistributedForce();
+                    distributedForce->deserialize(obj);
+                    bcs.push_back(dynamic_cast<BoundaryCondition *>(distributedForce));
+                } break;
             }
         }
 
+        m_boundaryConditions = bcs;
         return bcs;
     }
+    else return std::vector<BoundaryCondition *>();
 }
 
-void BoundaryConditionsParser::setJSON(const json &newObject) {
+void BoundaryConditionsParser::setJSON(const nlohmann::json &newObject) {
     m_object.reset(nullptr);
-    m_object = std::make_unique<json>(newObject);
+    m_object = std::make_unique<nlohmann::json>(newObject);
 }
 
 BoundaryConditionsParser::~BoundaryConditionsParser() {

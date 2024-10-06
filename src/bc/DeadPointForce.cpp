@@ -1,5 +1,7 @@
 #include "../../include/bc/DeadPointForce.hpp"
 
+using namespace std::literals::string_literals;
+
 DeadPointForce::DeadPointForce() : Load(LoadType::DeadPointForce) {}
 DeadPointForce::DeadPointForce(const std::array<double, 6> &projections)
 : m_projections(projections), Load(LoadType::DeadPointForce) {}
@@ -17,12 +19,12 @@ json DeadPointForce::serialize() const {
     return json({});
 }
 
-std::ostream &operator<<(std::ostream &os, const DeadPointForce &load) {
-    os << "[ ";
-    for (const auto &proj : load.m_projections) {
-        os << proj << ' ';
+std::string DeadPointForce::toString() const  {
+    std::string str = "{ DeadPointForce: [ "s;
+    for (const auto &proj : m_projections) {
+        str += std::to_string(proj) + " "s;
     }
-    os << ']';
+    str += "] }";
 
-    return os;
+    return str;
 }

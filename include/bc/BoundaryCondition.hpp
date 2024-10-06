@@ -2,6 +2,8 @@
 
 #include "../JSONSerializable.hpp"
 
+#include <string>
+
 enum struct BoundaryConditionType {
     Load,
     Restraint
@@ -13,6 +15,9 @@ public:
 
     virtual void deserialize(const json &) = 0;
     virtual json serialize() const = 0;
+
+    virtual std::string toString() const = 0;
+    BoundaryConditionType type() const { return bcType; }
 protected:
     BoundaryConditionType bcType;
 };
