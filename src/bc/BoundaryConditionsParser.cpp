@@ -3,6 +3,9 @@
 #include "../../include/bc/DeadPointForce.hpp"
 #include "../../include/bc/FaceDistributedForce.hpp"
 #include "../../include/bc/FacePressure.hpp"
+#include "../../include/bc/Displacement.hpp"
+
+#include <algorithm>
 
 BoundaryConditionsParser::BoundaryConditionsParser(const nlohmann::json &object)
 : m_object(std::move(std::make_unique<nlohmann::json>(object))) {
@@ -33,6 +36,14 @@ std::vector<BoundaryCondition *> BoundaryConditionsParser::parse() {
                     distributedForce->deserialize(obj);
                     bcs.push_back(dynamic_cast<BoundaryCondition *>(distributedForce));
                 } break;
+            }
+        }
+        for (const auto &obj : (*m_object)["restraints"]) {
+            const auto &flags = obj["flag"];
+            if (std::any_of(flags.begin(), flags.end(), [&](auto flag) { return flag == 1; })) {
+                auto *displacement = new Displacement();
+                displacement->deserialize(obj);
+                bcs.push_back(dynamic_cast<BoundaryCondition *>(displacement));
             }
         }
 
