@@ -6,14 +6,10 @@
 
 class DeadPointForce : public Load {
 public:
-    DeadPointForce();
-    DeadPointForce(const std::array<double, 6> &projections);
+    DeadPointForce(const json &jsonObject);
 
-    void deserialize(const json &object) override;
-    json serialize() const override;
+    void deserialize() override;
+    void serialize() override;
 
-    std::string toString() const override;
-
-private:
-    std::array<double, 6> m_projections; // ( Fx, Fy, Fz, Mx, My, Mz )
+    std::array<double, 6> projections; // ( Fx, Fy, Fz, Mx, My, Mz )
 };

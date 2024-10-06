@@ -11,13 +11,16 @@ enum struct BoundaryConditionType {
 
 class BoundaryCondition : public JSONSerializable {
 public:
-    BoundaryCondition(BoundaryConditionType type) : bcType(type) {}
+    BoundaryCondition(BoundaryConditionType type, const json &jsonObject)
+        : JSONSerializable(jsonObject), p_bcType(type) {}
 
-    virtual void deserialize(const json &) = 0;
-    virtual json serialize() const = 0;
+    virtual void deserialize() = 0;
+    virtual void serialize() = 0;
 
-    virtual std::string toString() const = 0;
-    BoundaryConditionType type() const { return bcType; }
+    virtual std::string toString() const { return p_json.dump(); }
+    BoundaryConditionType type() const { return p_bcType; }
+    size_t id() const { return p_id; }
 protected:
-    BoundaryConditionType bcType;
+    BoundaryConditionType p_bcType;
+    size_t p_id;
 };

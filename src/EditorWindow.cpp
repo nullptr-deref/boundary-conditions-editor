@@ -1,18 +1,53 @@
 #include "../include/EditorWindow.hpp"
 
+#include "../include/bc/Restraint.hpp"
+#include "../include/bc/Load.hpp"
+
 #include <QFileDialog>
+#include <QGroupBox>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStandardPaths>
+#include <QScrollArea>
+#include <QVBoxLayout>
 
 #include <iostream>
 
-EditorWindow::EditorWindow(QWidget *parent) {
+RestraintType determineRestraintType(const json &);
+json &getCorrespondingObject(BoundaryCondition *, json &);
+
+EditorWindow::EditorWindow(QWidget *parent) : m_bcView(new QWidget), m_bcCounter(new QLabel) {
     prepareInternalActions();
     prepareMenus();
 
     connect(this, &EditorWindow::fileOpened, this, &EditorWindow::updateTitleText);
+
+    QWidget *centralWidget = new QWidget;
+    setCentralWidget(centralWidget);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
+    QScrollArea *scrollArea = new QScrollArea(centralWidget);
+    scrollArea->setWidget(m_bcView);
+    mainLayout->addWidget(scrollArea);
+
+    QGroupBox *infoAndButtonsBox = new QGroupBox(centralWidget);
+    QHBoxLayout *infoBoxLayout = new QHBoxLayout();
+    infoBoxLayout->addWidget(m_bcCounter);
+    m_exportButton = new QPushButton(tr("Export"));
+    connect(m_exportButton, &QPushButton::pressed, this, &EditorWindow::exportFile);
+
+    m_filterButton = new QPushButton(tr("Filter"));
+
+    m_recalculateButton = new QPushButton(tr("Recalculate"));
+
+    infoBoxLayout->addWidget(m_filterButton);
+    infoBoxLayout->addWidget(m_exportButton);
+    infoBoxLayout->addWidget(m_recalculateButton);
+    infoAndButtonsBox->setLayout(infoBoxLayout);
+
+    mainLayout->addWidget(infoAndButtonsBox);
+    centralWidget->setLayout(mainLayout);
 }
 
 EditorWindow::~EditorWindow() {}
@@ -40,9 +75,9 @@ void EditorWindow::selectAndOpenFile() {
 
         if (m_inputFilestream.good()) {
             try {
-                auto parsedJSON = json::parse(m_inputFilestream);
-                m_parser.setJSON(parsedJSON);
-                [[maybe_unused]] auto bcs = m_parser.parse();
+                m_fileContents = json::parse(m_inputFilestream);
+                BoundaryConditionsParser parser(m_fileContents);
+                m_boundaryConditions = parser.parse();
                 m_fileCurrentlyOpened = true;
 
                 emit fileOpened(m_filename);
@@ -69,7 +104,30 @@ void EditorWindow::selectAndOpenFile() {
 void EditorWindow::closeFile() {}
 void EditorWindow::filter() {}
 void EditorWindow::recalculateProject() {}
-void EditorWindow::exportFile() {}
+
+void EditorWindow::exportFile() {
+    auto contentsCopy = m_fileContents;
+
+    for (const auto bc : m_boundaryConditions) {
+        auto &obj = getCorrespondingObject(bc, contentsCopy);
+        bc->serialize();
+        obj = bc->getJSON();
+    }
+
+    const std::string exportedFileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Open file"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+        tr("Fidesys Case Files (*.fc);;All files (*.*)")
+    ).toStdString();
+
+    if (!exportedFileName.empty()) {
+        std::ofstream outputFileStream(exportedFileName);
+        const auto pretty = contentsCopy.dump(4);
+        outputFileStream << pretty;
+    }
+}
+
 void EditorWindow::quit() {}
 
 void EditorWindow::prepareInternalActions() {
@@ -109,5 +167,43 @@ void EditorWindow::prepareMenus() {
 }
 
 void EditorWindow::cleanupJsonCache() {
-    m_parser.setJSON({});
+    m_fileContents = json::object();
+}
+
+/*
+ * Returns appropriate JSON object which represents provided boundary condition.
+ * The behavior is undefined if the provided boundary condition was not previously
+ * declared in the input file.
+ */
+json &getCorrespondingObject(BoundaryCondition *bc, json &object) {
+    json section = json::object();
+    switch(static_cast<uint32_t>(bc->type())) {
+        case static_cast<uint32_t>(BoundaryConditionType::Load): {
+            section = object["loads"];
+            for (auto &bcObj : section) {
+                if (bcObj["type"] == dynamic_cast<Load *>(bc)->loadType && bcObj["id"] == bc->id()) {
+                    return bcObj;
+                }
+            }
+        } break;
+        case static_cast<uint32_t>(BoundaryConditionType::Restraint): {
+            section = object["restraints"];
+            for (auto &bcObj : section) {
+                if (determineRestraintType(bcObj) == dynamic_cast<Restraint *>(bc)->restraintType && bcObj["id"] == bc->id()) {
+                    return bcObj;
+                }
+            }
+        } break;
+    }
+}
+
+RestraintType determineRestraintType(const json &obj) {
+    for (uint32_t i = 1; i < 10; i++) {
+        if (std::any_of(obj["flag"].begin(), obj["flag"].end(), [i](uint32_t flag) { return flag == i; })) {
+            return static_cast<RestraintType>(i);
+        }
+    }
+}
+
+QWidget *EditorWindow::createBCBox(BoundaryCondition *bc) {
 }

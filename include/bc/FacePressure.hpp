@@ -4,13 +4,10 @@
 
 class FacePressure : public Load {
 public:
-    FacePressure();
-    FacePressure(double magnitude);
+    FacePressure(const json &jsonObject);
 
-    void deserialize(const json &object) override;
-    json serialize() const override;
+    void deserialize() override;
+    void serialize() override;
 
-    std::string toString() const override;
-private:
-    double m_magnitude;
+    double magnitude;
 };

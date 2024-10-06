@@ -8,6 +8,8 @@ using json = nlohmann::json;
 
 #include <QAction>
 #include <QMainWindow>
+#include <QLabel>
+#include <QPushButton>
 
 #include <fstream>
 #include <memory>
@@ -24,7 +26,7 @@ public:
 private:
     std::string m_filename;
     std::ifstream m_inputFilestream;
-    std::ifstream m_exportFilestream;
+    //std::ofstream m_exportFilestream;
 
     std::shared_ptr<QAction> m_openFileAction = nullptr;
     std::shared_ptr<QAction> m_closeFileAction = nullptr;
@@ -40,8 +42,18 @@ private:
     void prepareInternalActions();
     void prepareMenus();
 
+    QWidget *m_bcView;
+    QLabel  *m_bcCounter;
+    QPushButton *m_exportButton;
+    QPushButton *m_recalculateButton;
+    QPushButton *m_filterButton;
+
+    QWidget *createBCBox(BoundaryCondition *bc);
+
     void cleanupJsonCache();
-    BoundaryConditionsParser m_parser = BoundaryConditionsParser({});
+    //BoundaryConditionsParser m_parser = BoundaryConditionsParser({});
+    json m_fileContents;
+    std::vector<BoundaryCondition *> m_boundaryConditions;
 
     bool m_fileCurrentlyOpened = false;
 

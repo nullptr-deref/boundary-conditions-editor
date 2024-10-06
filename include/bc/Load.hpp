@@ -16,10 +16,10 @@ enum struct LoadType : uint32_t {
 
 class Load : public BoundaryCondition {
 public:
-    Load(LoadType type) : BoundaryCondition(BoundaryConditionType::Load), type(type) {}
+    Load(LoadType type, const json &jsonObject) : BoundaryCondition(BoundaryConditionType::Load, jsonObject), loadType(type) {}
 
-    virtual void deserialize(const json &) = 0;
-    virtual json serialize() const = 0;
+    virtual void deserialize() = 0;
+    virtual void serialize() = 0;
 
-    LoadType type;
+    LoadType loadType;
 };

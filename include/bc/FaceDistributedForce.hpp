@@ -6,14 +6,10 @@
 
 class FaceDistributedForce : public Load {
 public:
-    FaceDistributedForce();
-    FaceDistributedForce(const std::array<double, 6> &projections);
+    FaceDistributedForce(const json &jsonObject);
 
-    void deserialize(const json &object) override;
-    json serialize() const override;
+    void deserialize() override;
+    void serialize() override;
 
-    std::string toString() const override;
-
-private:
-    std::array<double, 6> m_projections; // ( Fx, Fy, Fz, Mx, My, Mz )
+    std::array<double, 6> projections; // ( Fx, Fy, Fz, Mx, My, Mz )
 };

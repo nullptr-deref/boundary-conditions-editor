@@ -2,29 +2,22 @@
 
 using namespace std::literals::string_literals;
 
-FaceDistributedForce::FaceDistributedForce() : Load(LoadType::FaceDistributedForce) {}
-FaceDistributedForce::FaceDistributedForce(const std::array<double, 6> &projections)
-: m_projections(projections), Load(LoadType::FaceDistributedForce) {}
+FaceDistributedForce::FaceDistributedForce(const json &jsonObject)
+: Load(LoadType::FaceDistributedForce, jsonObject) {}
 
-void FaceDistributedForce::deserialize(const json &object) {
+void FaceDistributedForce::deserialize() {
     size_t i = 0;
-    for (auto &proj : m_projections) {
-        proj = object["data"][i].front();
+    p_id = p_json["id"];
+    for (auto &proj : projections) {
+        proj = p_json["data"][i].front();
         ++i;
     }
 }
 
-json FaceDistributedForce::serialize() const {
-    std::clog << "Not implemented\n";
-    return json({});
-}
-
-std::string FaceDistributedForce::toString() const  {
-    std::string str = "{ FaceDistributedForce: [ "s;
-    for (const auto &proj : m_projections) {
-        str += std::to_string(proj) + " "s;
+void FaceDistributedForce::serialize() {
+    p_json["data"] = json::array();
+    size_t i = 0;
+    for (const auto &proj : projections) {
+        p_json["data"][i] = json::array({ proj });
     }
-    str += "] }";
-
-    return str;
 }

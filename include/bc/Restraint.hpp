@@ -14,10 +14,10 @@ enum struct RestraintType : uint32_t {
 
 class Restraint : public BoundaryCondition {
 public:
-    Restraint(RestraintType type) : BoundaryCondition(BoundaryConditionType::Restraint), type(type) {}
+    Restraint(RestraintType type, const json &jsonObject) : BoundaryCondition(BoundaryConditionType::Restraint, jsonObject), restraintType(type) {}
 
-    virtual void deserialize(const json &) = 0;
-    virtual json serialize() const = 0;
+    virtual void deserialize() = 0;
+    virtual void serialize() = 0;
 
-    RestraintType type;
+    RestraintType restraintType;
 };
