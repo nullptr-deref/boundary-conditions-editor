@@ -6,6 +6,7 @@ FacePressure::FacePressure(const json &jsonObject) : Load(LoadType::FacePressure
 
 void FacePressure::deserialize() {
     p_id = p_json["id"];
+    p_name = p_json["name"];
     magnitude = p_json["data"][0].front();
 }
 

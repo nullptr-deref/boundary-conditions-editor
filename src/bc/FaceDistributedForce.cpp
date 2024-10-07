@@ -6,8 +6,9 @@ FaceDistributedForce::FaceDistributedForce(const json &jsonObject)
 : Load(LoadType::FaceDistributedForce, jsonObject) {}
 
 void FaceDistributedForce::deserialize() {
-    size_t i = 0;
     p_id = p_json["id"];
+    p_name = p_json["name"];
+    size_t i = 0;
     for (auto &proj : projections) {
         proj = p_json["data"][i].front();
         ++i;

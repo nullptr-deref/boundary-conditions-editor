@@ -4,6 +4,7 @@ DeadPointForce::DeadPointForce(const json &jsonObject) : Load(LoadType::DeadPoin
 
 void DeadPointForce::deserialize() {
     p_id = p_json["id"];
+    p_name = p_json["name"];
     size_t i = 0;
     for (auto &proj : projections) {
         proj = p_json["data"][i].front();

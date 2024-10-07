@@ -20,7 +20,9 @@ public:
     virtual std::string toString() const { return p_json.dump(); }
     BoundaryConditionType type() const { return p_bcType; }
     size_t id() const { return p_id; }
+    std::string name() const { return p_name; }
 protected:
     BoundaryConditionType p_bcType;
     size_t p_id;
+    std::string p_name;
 };

@@ -2,9 +2,9 @@
 
 #include "../include/bc/Restraint.hpp"
 #include "../include/bc/Load.hpp"
+#include "../include/bc/BoundaryConditionsParser.hpp"
 
 #include <QFileDialog>
-#include <QGroupBox>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -17,7 +17,7 @@
 RestraintType determineRestraintType(const json &);
 json &getCorrespondingObject(BoundaryCondition *, json &);
 
-EditorWindow::EditorWindow(QWidget *parent) : m_bcView(new QWidget), m_bcCounter(new QLabel) {
+EditorWindow::EditorWindow(QWidget *parent) {
     prepareInternalActions();
     prepareMenus();
 
@@ -26,27 +26,44 @@ EditorWindow::EditorWindow(QWidget *parent) : m_bcView(new QWidget), m_bcCounter
     QWidget *centralWidget = new QWidget;
     setCentralWidget(centralWidget);
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
-    QScrollArea *scrollArea = new QScrollArea(centralWidget);
-    scrollArea->setWidget(m_bcView);
-    mainLayout->addWidget(scrollArea);
+    QVBoxLayout *mainLayout  = new QVBoxLayout(centralWidget);
 
-    QGroupBox *infoAndButtonsBox = new QGroupBox(centralWidget);
-    QHBoxLayout *infoBoxLayout = new QHBoxLayout();
-    infoBoxLayout->addWidget(m_bcCounter);
+    QGroupBox *upperBox = new QGroupBox(tr("Boundary conditions"), centralWidget);
+    m_model = new QStandardItemModel(this);
+    m_settings = new QGroupBox();
+
+    m_bcTreeView = new QTreeView();
+    m_bcTreeView->setModel(m_model);
+
+    QHBoxLayout *upperLayout = new QHBoxLayout;
+    upperLayout->addWidget(m_bcTreeView);
+    upperLayout->addWidget(m_settings);
+    upperLayout->setStretchFactor(m_bcTreeView, 10);
+    upperLayout->setStretchFactor(m_settings, 20);
+
+    upperBox->setLayout(upperLayout);
+
+    mainLayout->addWidget(upperBox);
+
+    QGroupBox *buttonsBox = new QGroupBox(tr("File info and actions"), centralWidget);
+    QHBoxLayout *buttonsBoxLayout = new QHBoxLayout();
+
+    m_bcCounter = new QLabel("", buttonsBox);
+    buttonsBoxLayout->addWidget(m_bcCounter);
+    buttonsBoxLayout->addStretch();
+
     m_exportButton = new QPushButton(tr("Export"));
-    connect(m_exportButton, &QPushButton::pressed, this, &EditorWindow::exportFile);
-
-    m_filterButton = new QPushButton(tr("Filter"));
-
     m_recalculateButton = new QPushButton(tr("Recalculate"));
 
-    infoBoxLayout->addWidget(m_filterButton);
-    infoBoxLayout->addWidget(m_exportButton);
-    infoBoxLayout->addWidget(m_recalculateButton);
-    infoAndButtonsBox->setLayout(infoBoxLayout);
+    buttonsBoxLayout->addWidget(m_exportButton);
+    buttonsBoxLayout->addWidget(m_recalculateButton);
+    buttonsBox->setLayout(buttonsBoxLayout);
 
-    mainLayout->addWidget(infoAndButtonsBox);
+    mainLayout->addWidget(buttonsBox);
+
+    connect(m_exportButton, &QPushButton::pressed, this, &EditorWindow::exportFile);
+    connect(this, &EditorWindow::boundaryConditionsParsed, this, &EditorWindow::updateCounter);
+
     centralWidget->setLayout(mainLayout);
 }
 
@@ -80,6 +97,9 @@ void EditorWindow::selectAndOpenFile() {
                 m_boundaryConditions = parser.parse();
                 m_fileCurrentlyOpened = true;
 
+                updateTreeModel();
+
+                emit boundaryConditionsParsed(m_boundaryConditions.size());
                 emit fileOpened(m_filename);
             }
             catch (const json::exception &e) {
@@ -102,8 +122,12 @@ void EditorWindow::selectAndOpenFile() {
 }
 
 void EditorWindow::closeFile() {}
-void EditorWindow::filter() {}
-void EditorWindow::recalculateProject() {}
+void EditorWindow::recalculateProject() {
+    QMessageBox notImplementedAlert;
+    notImplementedAlert.setText(tr("This feature is not yet implemented."));
+    notImplementedAlert.setStandardButtons(QMessageBox::Ok);
+    notImplementedAlert.exec();
+}
 
 void EditorWindow::exportFile() {
     auto contentsCopy = m_fileContents;
@@ -138,8 +162,6 @@ void EditorWindow::prepareInternalActions() {
     m_closeFileAction = std::make_shared<QAction>();
     m_closeFileAction->setText(tr("&Close"));
 
-    m_filterAction = std::make_shared<QAction>();
-    m_filterAction->setText(tr("&Filter"));
 
     m_recalculateProjectAction = std::make_shared<QAction>();
     m_recalculateProjectAction->setText(tr("&Recalculate project"));
@@ -158,9 +180,6 @@ void EditorWindow::prepareMenus() {
     m_fileMenu->addAction(m_closeFileAction.get());
     m_fileMenu->addSeparator();
     m_fileMenu->addAction(m_quitAction.get());
-
-    m_viewMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&View")));
-    m_viewMenu->addAction(m_filterAction.get());
 
     m_projectMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&Project")));
     m_projectMenu->addAction(m_recalculateProjectAction.get());
@@ -205,5 +224,86 @@ RestraintType determineRestraintType(const json &obj) {
     }
 }
 
-QWidget *EditorWindow::createBCBox(BoundaryCondition *bc) {
+void EditorWindow::updateCounter(size_t bcCount) {
+    if (bcCount == 0) {
+        if (m_filename.empty())
+            m_bcCounter->setText(tr("No file opened."));
+        else m_bcCounter->setText(tr("No boundaries in the file."));
+    }
+    else {
+        m_bcCounter->setText(tr("Number of detected boundary conditions: %1").arg(bcCount));
+    }
+}
+
+void EditorWindow::updateTreeModel() {
+    m_model->clear();
+    m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "Type" << "ID");
+    size_t i = 0;
+    std::array<QStandardItem *, 2> primaryBCTypes = { nullptr, nullptr };
+    for (const auto &[type, name] : supportedBoundaryConditions) {
+        if (std::any_of(
+                m_boundaryConditions.cbegin(),
+                m_boundaryConditions.cend(),
+                [type](auto *boundary) { return boundary->type() == type; })
+        ) {
+            primaryBCTypes[i] = new QStandardItem(name.c_str());
+            m_model->appendRow(primaryBCTypes[i]);
+        }
+        i++;
+    }
+
+    auto *loads = primaryBCTypes[0];
+    if (loads) {
+        std::array<QStandardItem *, 3> loadGroups;
+        i = 0;
+        for (const auto &[supLoadType, supLoadName] : supportedLoads) {
+            loadGroups[i] = new QStandardItem(supLoadName.c_str());
+            for (auto *bc : m_boundaryConditions) {
+                if (bc->type() == BoundaryConditionType::Load && dynamic_cast<Load *>(bc)->loadType == supLoadType) {
+                    QStandardItem *boundary = new QStandardItem();
+                    boundary->setText(!bc->name().empty() ? bc->name().c_str() : "<no name>");
+                    loadGroups[i]->setChild(bc->id() - 1, boundary);
+                    loadGroups[i]->setChild(bc->id() - 1, 1, new QStandardItem(QString::number(bc->id())));
+
+                    boundary->setData((qulonglong)bc->id(), ID);
+                    boundary->setData(static_cast<uint32_t>(bc->type()), BCType);
+                    boundary->setData(QString::number(static_cast<uint32_t>(dynamic_cast<Load *>(bc)->loadType)), SpecificType);
+                }
+            }
+            loads->setChild(i, loadGroups[i]);
+            i++;
+        }
+    }
+
+    auto *restraints = primaryBCTypes[1];
+    if (restraints) {
+        std::array<QStandardItem *, 1> restraintGroups = { nullptr };
+        i = 0;
+        for (const auto &[supRestraintType, supRestraintName] : supportedRestraints) {
+            restraintGroups[i] = new QStandardItem(supRestraintName.c_str());
+            for (auto *bc : m_boundaryConditions) {
+                if (bc->type() == BoundaryConditionType::Restraint && dynamic_cast<Restraint *>(bc)->restraintType == supRestraintType) {
+                    QStandardItem *boundary = new QStandardItem();
+                    boundary->setText(!bc->name().empty() ? bc->name().c_str() : "<no name>");
+
+                    boundary->setData((qulonglong)bc->id(), ID);
+                    boundary->setData(static_cast<uint32_t>(bc->type()), BCType);
+                    boundary->setData(static_cast<uint32_t>(dynamic_cast<Restraint *>(bc)->restraintType), SpecificType);
+
+                    restraintGroups[i]->setChild(bc->id() - 1, boundary);
+                    restraintGroups[i]->setChild(bc->id() - 1, 1, new QStandardItem(QString::number(bc->id())));
+                }
+            }
+            restraints->setChild(i, restraintGroups[i]);
+            i++;
+        }
+    }
+}
+
+void EditorWindow::selectItem(const QModelIndex &idx) {
+    if (!idx.parent().isValid()) { return; }
+
+    auto *item = m_model->itemFromIndex(idx);
+    for (const auto *bc : m_boundaryConditions) {
+    }
 }

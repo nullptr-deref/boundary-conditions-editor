@@ -4,6 +4,7 @@ Displacement::Displacement(const json &jsonObject) : Restraint(RestraintType::Di
 
 void Displacement::deserialize() {
     p_id = p_json["id"];
+    p_name = p_json["name"];
     size_t i = 0;
     for (auto &magnitude : magnitudes) {
         if (p_json["flag"][i] == 1) {

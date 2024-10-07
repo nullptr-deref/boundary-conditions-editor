@@ -17,31 +17,35 @@ BoundaryConditionsParser::BoundaryConditionsParser(const nlohmann::json &object)
 std::vector<BoundaryCondition *> BoundaryConditionsParser::parse() const {
     std::vector<BoundaryCondition *> bcs;
     if (!m_object->empty()) {
-        for (const auto &obj : (*m_object)["loads"]) {
-            switch(obj["type"].get<uint32_t>()) {
-                case static_cast<uint32_t>(LoadType::DeadPointForce): {
-                    auto *force = new DeadPointForce(obj);
-                    force->deserialize();
-                    bcs.push_back(dynamic_cast<BoundaryCondition *>(force));
-                } break;
-                case static_cast<uint32_t>(LoadType::FacePressure): {
-                    auto *pressure = new FacePressure(obj);
-                    pressure->deserialize();
-                    bcs.push_back(dynamic_cast<BoundaryCondition *>(pressure));
-                } break;
-                case static_cast<uint32_t>(LoadType::FaceDistributedForce): {
-                    auto *distributedForce = new FaceDistributedForce(obj);
-                    distributedForce->deserialize();
-                    bcs.push_back(dynamic_cast<BoundaryCondition *>(distributedForce));
-                } break;
+        if (m_object->contains("loads")) {
+            for (const auto &obj : (*m_object)["loads"]) {
+                switch(obj["type"].get<uint32_t>()) {
+                    case static_cast<uint32_t>(LoadType::DeadPointForce): {
+                        auto *force = new DeadPointForce(obj);
+                        force->deserialize();
+                        bcs.push_back(dynamic_cast<BoundaryCondition *>(force));
+                    } break;
+                    case static_cast<uint32_t>(LoadType::FacePressure): {
+                        auto *pressure = new FacePressure(obj);
+                        pressure->deserialize();
+                        bcs.push_back(dynamic_cast<BoundaryCondition *>(pressure));
+                    } break;
+                    case static_cast<uint32_t>(LoadType::FaceDistributedForce): {
+                        auto *distributedForce = new FaceDistributedForce(obj);
+                        distributedForce->deserialize();
+                        bcs.push_back(dynamic_cast<BoundaryCondition *>(distributedForce));
+                    } break;
+                }
             }
         }
-        for (const auto &obj : (*m_object)["restraints"]) {
-            const auto &flags = obj["flag"];
-            if (std::any_of(flags.begin(), flags.end(), [&](auto flag) { return flag == 1; })) {
-                auto *displacement = new Displacement(obj);
-                displacement->deserialize();
-                bcs.push_back(dynamic_cast<BoundaryCondition *>(displacement));
+        if (m_object->contains("restraints")) {
+            for (const auto &obj : (*m_object)["restraints"]) {
+                const auto &flags = obj["flag"];
+                if (std::any_of(flags.begin(), flags.end(), [&](auto flag) { return flag == 1; })) {
+                    auto *displacement = new Displacement(obj);
+                    displacement->deserialize();
+                    bcs.push_back(dynamic_cast<BoundaryCondition *>(displacement));
+                }
             }
         }
     }
