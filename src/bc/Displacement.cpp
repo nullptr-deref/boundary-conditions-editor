@@ -7,7 +7,8 @@ void Displacement::deserialize() {
     p_name = p_json["name"];
     size_t i = 0;
     for (auto &magnitude : magnitudes) {
-        if (p_json["flag"][i] == 1) {
+        directions[i] = p_json["flag"][i];
+        if (directions[i] == 1) {
             magnitude = p_json["data"][i].front();
         }
         else magnitude = 0;
@@ -16,8 +17,10 @@ void Displacement::deserialize() {
 }
 
 void Displacement::serialize() {
+    size_t i = 0;
     for (const auto &magnitude : magnitudes) {
         p_json["data"].push_back(std::vector<double>(1, magnitude));
-        p_json["flag"].push_back(magnitude == 0 ? 0 : 1);
+        p_json["flag"].push_back(directions[i]);
+        i++;
     }
 }

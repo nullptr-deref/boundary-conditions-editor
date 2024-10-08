@@ -13,17 +13,35 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(nlohmann_json REQUIRED)
 
-set(SRC_DIR "src/")
-set(INCLUDE_DIR "include/")
+set(src_dir "src/")
+set(include_dir "include/")
 
-file(GLOB_RECURSE headers
-    LIST_DIRECTORIES FALSE
-    "${INCLUDE_DIR}/*.hpp"
+set(sources
+    "${src_dir}/EditorWindow.cpp"
+    "${src_dir}/main.cpp"
+
+    "${src_dir}/bc/Load.cpp"
+    "${src_dir}/bc/Restraint.cpp"
+    "${src_dir}/bc/Pressure.cpp"
+    "${src_dir}/bc/BoundaryConditionsParser.cpp"
 )
-file(GLOB_RECURSE sources
-    LIST_DIRECTORIES FALSE
-    "${SRC_DIR}/*.cpp"
+set(headers
+    "${include_dir}/EditorWindow.hpp"
+    "${include_dir}/JSONSerializable.hpp"
+
+    "${include_dir}/bc/BoundaryConditionsParser.hpp"
+    "${include_dir}/bc/Load.hpp"
+    "${include_dir}/bc/Restraint.hpp"
+    "${include_dir}/bc/Pressure.hpp"
 )
+#file(GLOB_RECURSE headers
+#    LIST_DIRECTORIES FALSE
+#    "${INCLUDE_DIR}/*.hpp"
+#)
+#file(GLOB_RECURSE sources
+#    LIST_DIRECTORIES FALSE
+#    "${SRC_DIR}/*.cpp"
+#)
 
 set(PROJECT_SOURCES
     ${sources}

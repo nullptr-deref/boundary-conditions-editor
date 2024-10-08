@@ -1,25 +1,27 @@
 #pragma once
 
-#include "BoundaryCondition.hpp"
+#include "../JSONSerializable.hpp"
 
 #include <array>
-#include <iostream>
 
-// Seems like commented out types of loads are not supported in non-binary export.
-enum struct LoadType : uint32_t {
-    FacePressure = 3,
-    // EdgePressure = 2,
-    DeadPointForce = 5, // for some reason no matter which mode I select dead point force is always node force
-    // EdgeDistributedForce = 32,
-    FaceDistributedForce = 35
-};
+namespace bc {
+    // Seems like commented out types of loads are not supported in non-binary export.
+    enum struct LoadType : uint32_t {
+        DeadPointForce = 5, // for some reason no matter which mode I select dead point force is always node force
+        // EdgeDistributedForce = 32,
+        FaceDistributedForce = 35
+    };
 
-class Load : public BoundaryCondition {
-public:
-    Load(LoadType type, const json &jsonObject) : BoundaryCondition(BoundaryConditionType::Load, jsonObject), loadType(type) {}
+    using ProjectionVector = std::array<double, 6>;
 
-    virtual void deserialize() = 0;
-    virtual void serialize() = 0;
+    class Load : public JSONSerializable<ProjectionVector> {
+    public:
+        Load(LoadType t, const json &j) : JSONSerializable(j), type(t) {}
+        ~Load() override {}
 
-    LoadType loadType;
-};
+        const LoadType type;
+    private:
+        ProjectionVector deserialize() const override;
+        const json serialize(const ProjectionVector &data) override;
+    };
+} // namespace bc
