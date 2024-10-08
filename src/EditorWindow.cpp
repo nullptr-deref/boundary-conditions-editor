@@ -14,9 +14,6 @@
 
 #include <iostream>
 
-RestraintType determineRestraintType(const json &);
-json &getCorrespondingObject(BoundaryCondition *, json &);
-
 EditorWindow::EditorWindow(QWidget *parent) {
     prepareInternalActions();
     prepareMenus();
@@ -92,14 +89,9 @@ void EditorWindow::selectAndOpenFile() {
 
         if (m_inputFilestream.good()) {
             try {
-                m_fileContents = json::parse(m_inputFilestream);
-                BoundaryConditionsParser parser(m_fileContents);
-                m_boundaryConditions = parser.parse();
-                m_fileCurrentlyOpened = true;
-
+                loadParsedData();
                 updateTreeModel();
 
-                emit boundaryConditionsParsed(m_boundaryConditions.size());
                 emit fileOpened(m_filename);
             }
             catch (const json::exception &e) {
@@ -132,11 +124,13 @@ void EditorWindow::recalculateProject() {
 void EditorWindow::exportFile() {
     auto contentsCopy = m_fileContents;
 
+    /* TODO: rewrite
     for (const auto bc : m_boundaryConditions) {
-        auto &obj = getCorrespondingObject(bc, contentsCopy);
+        //auto &obj = getCorrespondingObject(bc, contentsCopy);
         bc->serialize();
         obj = bc->getJSON();
     }
+    */
 
     const std::string exportedFileName = QFileDialog::getSaveFileName(
         this,
@@ -193,10 +187,9 @@ void EditorWindow::cleanupJsonCache() {
  * Returns appropriate JSON object which represents provided boundary condition.
  * The behavior is undefined if the provided boundary condition was not previously
  * declared in the input file.
- */
 json &getCorrespondingObject(BoundaryCondition *bc, json &object) {
     json section = json::object();
-    switch(static_cast<uint32_t>(bc->type())) {
+    switch(static_cast<uint32_t>(bc->genericType())) {
         case static_cast<uint32_t>(BoundaryConditionType::Load): {
             section = object["loads"];
             for (auto &bcObj : section) {
@@ -215,14 +208,7 @@ json &getCorrespondingObject(BoundaryCondition *bc, json &object) {
         } break;
     }
 }
-
-RestraintType determineRestraintType(const json &obj) {
-    for (uint32_t i = 1; i < 10; i++) {
-        if (std::any_of(obj["flag"].begin(), obj["flag"].end(), [i](uint32_t flag) { return flag == i; })) {
-            return static_cast<RestraintType>(i);
-        }
-    }
-}
+*/
 
 void EditorWindow::updateCounter(size_t bcCount) {
     if (bcCount == 0) {
@@ -237,8 +223,18 @@ void EditorWindow::updateCounter(size_t bcCount) {
 
 void EditorWindow::updateTreeModel() {
     m_model->clear();
-    m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "Type" << "ID");
+    m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "ID");
     size_t i = 0;
+
+    /* TODO: rewrite
+    for (const auto &[gtype, name] : m_parsedMetadata.genericTypes) {
+        if (name == "loads") {
+            const auto boundaries = m_boundaryConditions.getGeneric<bc::Load>(gtype);
+        }
+        if (name == "restraints") {
+            const auto boundaries = m_boundaryConditions.getGeneric<bc::Restraint>(gtype);
+        }
+    }
     std::array<QStandardItem *, 2> primaryBCTypes = { nullptr, nullptr };
     for (const auto &[type, name] : supportedBoundaryConditions) {
         if (std::any_of(
@@ -265,9 +261,9 @@ void EditorWindow::updateTreeModel() {
                     loadGroups[i]->setChild(bc->id() - 1, boundary);
                     loadGroups[i]->setChild(bc->id() - 1, 1, new QStandardItem(QString::number(bc->id())));
 
-                    boundary->setData((qulonglong)bc->id(), ID);
-                    boundary->setData(static_cast<uint32_t>(bc->type()), BCType);
-                    boundary->setData(QString::number(static_cast<uint32_t>(dynamic_cast<Load *>(bc)->loadType)), SpecificType);
+                    boundary->setData((qulonglong)bc->id(), static_cast<int>(ItemRole::ID));
+                    boundary->setData(static_cast<uint32_t>(bc->type()), static_cast<int>(ItemRole::GenericType));
+                    boundary->setData(QString::number(static_cast<uint32_t>(dynamic_cast<Load *>(bc)->loadType)), static_cast<int>(ItemRole::SpecificType));
                 }
             }
             loads->setChild(i, loadGroups[i]);
@@ -286,6 +282,7 @@ void EditorWindow::updateTreeModel() {
                     QStandardItem *boundary = new QStandardItem();
                     boundary->setText(!bc->name().empty() ? bc->name().c_str() : "<no name>");
 
+
                     boundary->setData((qulonglong)bc->id(), ID);
                     boundary->setData(static_cast<uint32_t>(bc->type()), BCType);
                     boundary->setData(static_cast<uint32_t>(dynamic_cast<Restraint *>(bc)->restraintType), SpecificType);
@@ -298,12 +295,36 @@ void EditorWindow::updateTreeModel() {
             i++;
         }
     }
+    */
 }
 
 void EditorWindow::selectItem(const QModelIndex &idx) {
     if (!idx.parent().isValid()) { return; }
 
+    /* TODO: rewrite
     auto *item = m_model->itemFromIndex(idx);
     for (const auto *bc : m_boundaryConditions) {
     }
+    */
+}
+
+void EditorWindow::loadParsedData() {
+    m_fileContents = json::parse(m_inputFilestream);
+    bc::BoundaryConditionsParser parser(m_fileContents);
+    clearBoundaries();
+    //const auto parsedData = parser.parse();
+    m_forces = parser.parse<bc::Load, bc::ParsingOrigin::LoadsArray>();
+    m_pressures = parser.parse<bc::Pressure, bc::ParsingOrigin::LoadsArray>();
+    m_displacements = parser.parse<bc::Restraint, bc::ParsingOrigin::RestraintsArray>();
+
+    m_fileCurrentlyOpened = true;
+
+    emit boundaryConditionsParsed(m_forces.size() + m_pressures.size() + m_displacements.size());
+}
+
+void EditorWindow::clearBoundaries() {
+    m_forces.clear();
+    m_pressures.clear();
+    m_displacements.clear();
+
 }

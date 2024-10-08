@@ -2,6 +2,7 @@
 
 #include "bc/Restraint.hpp"
 #include "bc/Load.hpp"
+#include "bc/Pressure.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -15,6 +16,7 @@ using json = nlohmann::json;
 #include <QStandardItemModel>
 #include <QTreeView>
 
+#include <array>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -22,21 +24,6 @@ using json = nlohmann::json;
 #include <vector>
 
 constexpr const char *WINDOW_NAME = "Boundary Conditions Editor";
-
-const std::map<BoundaryConditionType, std::string> supportedBoundaryConditions = {
-    { BoundaryConditionType::Load, "Loads" },
-    { BoundaryConditionType::Restraint, "Restraints" }
-};
-
-const std::map<LoadType, std::string> supportedLoads = {
-    { LoadType::DeadPointForce, "Dead point force" },
-    { LoadType::FaceDistributedForce, "Distributed force" },
-    { LoadType::FacePressure, "Pressure" }
-};
-
-const std::map<RestraintType, std::string> supportedRestraints = {
-    { RestraintType::Displacement, "Displacement" }
-};
 
 class EditorWindow : public QMainWindow {
     Q_OBJECT
@@ -66,16 +53,23 @@ private:
 
     void cleanupJsonCache();
     json m_fileContents;
-    std::vector<BoundaryCondition *> m_boundaryConditions;
+
+    std::vector<bc::Load> m_forces;
+    std::vector<bc::Pressure> m_pressures;
+    std::vector<bc::Restraint> m_displacements;
+    void clearBoundaries();
+
     size_t m_selectedItemIndex;
+
+    void loadParsedData();
 
     QTreeView *m_bcTreeView = nullptr;
     QGroupBox *m_settings = nullptr;
     QStandardItemModel *m_model = nullptr;
 
-    enum ItemRole {
+    enum class ItemRole : int {
         ID = Qt::UserRole,
-        BCType,
+        GenericType,
         SpecificType
     };
 
