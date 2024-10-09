@@ -124,13 +124,21 @@ void EditorWindow::recalculateProject() {
 void EditorWindow::exportFile() {
     auto contentsCopy = m_fileContents;
 
-    /* TODO: rewrite
-    for (const auto bc : m_boundaryConditions) {
-        //auto &obj = getCorrespondingObject(bc, contentsCopy);
-        bc->serialize();
-        obj = bc->getJSON();
+    json loads = json::array();
+    for (auto &force : m_forces) {
+        loads.push_back(force.serialize());
     }
-    */
+    for (auto &pressure : m_pressures) {
+        loads.push_back(pressure.serialize());
+    }
+
+    json restraints = json::array();
+    for (const auto &displ : m_displacements) {
+        restraints.push_back(displ.serialize());
+    }
+
+    contentsCopy["loads"] = loads;
+    contentsCopy["restraints"] = restraints;
 
     const std::string exportedFileName = QFileDialog::getSaveFileName(
         this,
@@ -141,8 +149,8 @@ void EditorWindow::exportFile() {
 
     if (!exportedFileName.empty()) {
         std::ofstream outputFileStream(exportedFileName);
-        const auto pretty = contentsCopy.dump(4);
-        outputFileStream << pretty;
+        const auto prettied = contentsCopy.dump(4);
+        outputFileStream << prettied;
     }
 }
 
@@ -224,7 +232,6 @@ void EditorWindow::updateCounter(size_t bcCount) {
 void EditorWindow::updateTreeModel() {
     m_model->clear();
     m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "ID");
-    size_t i = 0;
 
     /* TODO: rewrite
     for (const auto &[gtype, name] : m_parsedMetadata.genericTypes) {
@@ -312,10 +319,33 @@ void EditorWindow::loadParsedData() {
     m_fileContents = json::parse(m_inputFilestream);
     bc::BoundaryConditionsParser parser(m_fileContents);
     clearBoundaries();
-    //const auto parsedData = parser.parse();
+
     m_forces = parser.parse<bc::Load, bc::ParsingOrigin::LoadsArray>();
+    for (const auto &force : m_forces) {
+        std::clog << "=== Forces list ===\n";
+        for (const auto &el : force.data) {
+            std::clog << el << " ";
+        }
+        std::clog << '\n';
+    }
     m_pressures = parser.parse<bc::Pressure, bc::ParsingOrigin::LoadsArray>();
+    for (const auto &pr : m_pressures) {
+        std::clog << "=== Pressures list ===\n";
+        std::clog << pr.data;
+        std::clog << '\n';
+    }
     m_displacements = parser.parse<bc::Restraint, bc::ParsingOrigin::RestraintsArray>();
+    for (const auto &displ : m_displacements) {
+        std::clog << "=== Displacements list ===\n";
+        for (const auto &el : displ.data) {
+            std::clog << el << " ";
+        }
+        std::clog << '\n';
+        for (const auto &f : displ.flags) {
+            std::clog << f << " ";
+        }
+        std::clog << '\n';
+    }
 
     m_fileCurrentlyOpened = true;
 
@@ -326,5 +356,4 @@ void EditorWindow::clearBoundaries() {
     m_forces.clear();
     m_pressures.clear();
     m_displacements.clear();
-
 }

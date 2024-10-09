@@ -44,7 +44,9 @@ std::vector<T> bc::BoundaryConditionsParser::parse() const {
             if (m_object->contains(accessor)) {
                 for (const auto &obj : (*m_object)[accessor]) {
                     if constexpr (std::is_same<T, Pressure>()) {
-                        boundaries.push_back(Pressure(PressureType::Face, obj));
+                        if ((*m_object)["type"] == static_cast<uint32_t>(PressureType::Face)) {
+                            boundaries.push_back(Pressure(PressureType::Face, obj));
+                        }
                     }
                     else {
                         switch(obj["type"].get<uint32_t>()) {
@@ -55,6 +57,9 @@ std::vector<T> bc::BoundaryConditionsParser::parse() const {
                                 boundaries.push_back(Load(LoadType::FaceDistributedForce, obj));
                             } break;
                         }
+                    }
+                    if (!boundaries.empty()) {
+                        boundaries.back().deserialize();
                     }
                 }
             }
@@ -69,6 +74,9 @@ std::vector<T> bc::BoundaryConditionsParser::parse() const {
                             boundaries.push_back(Restraint(RestraintType::Displacement, obj));
                             break;
                         // some place for further check (if there will ever be)
+                    }
+                    if (!boundaries.empty()) {
+                        boundaries.back().deserialize();
                     }
                 }
             }

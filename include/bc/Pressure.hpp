@@ -19,8 +19,8 @@ namespace bc {
         ~Pressure() override {}
 
         const PressureType type;
-    private:
-        double deserialize() const override;
-        const json serialize(const double &magnitude) override;
+
+        double deserialize() override;
+        const json serialize() const override;
     };
 } // namespace bc

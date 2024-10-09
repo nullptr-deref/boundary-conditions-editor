@@ -20,8 +20,8 @@ namespace bc {
         ~Load() override {}
 
         const LoadType type;
-    private:
-        ProjectionVector deserialize() const override;
-        const json serialize(const ProjectionVector &data) override;
+
+        ProjectionVector deserialize() override;
+        const json serialize() const override;
     };
 } // namespace bc
