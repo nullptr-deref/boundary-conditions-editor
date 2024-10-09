@@ -21,6 +21,7 @@ using json = nlohmann::json;
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 constexpr const char *WINDOW_NAME = "Boundary Conditions Editor";
@@ -63,17 +64,25 @@ private:
 
     void loadParsedData();
 
-    QTreeView *m_bcTreeView = nullptr;
+    QTreeView *m_treeView = nullptr;
     QGroupBox *m_settings = nullptr;
     QStandardItemModel *m_model = nullptr;
 
-    enum class ItemRole : int {
+    enum struct ItemRole : int {
         ID = Qt::UserRole,
-        GenericType,
-        SpecificType
+        Type,
+        BType
+    };
+
+    enum struct BCType : uint32_t {
+        Load,
+        Pressure,
+        Displacement
     };
 
     void updateTreeModel();
+    template <typename T>
+    void sendDataToSettingsWidget(T &data);
 
     bool m_fileCurrentlyOpened = false;
 
@@ -96,3 +105,14 @@ signals:
     void boundaryConditionsParsed(size_t count);
     void fileClosed();
 };
+
+template <typename T>
+void EditorWindow::sendDataToSettingsWidget(T &data) {
+    if constexpr (std::is_same<T, bc::ProjectionVector>()) {
+    }
+    if constexpr (std::is_same<T, double>()) {
+    }
+    // Passing two 6-element vectors to deal with displacements
+    if constexpr (std::is_same<T, std::array<bc::ProjectionVector, 2>>()) {
+    }
+}

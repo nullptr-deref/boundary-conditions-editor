@@ -19,6 +19,8 @@ namespace bc {
         ~Pressure() override {}
 
         const PressureType type;
+        std::string name;
+        size_t id;
 
         double deserialize() override;
         const json serialize() const override;

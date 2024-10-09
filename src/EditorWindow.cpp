@@ -29,13 +29,13 @@ EditorWindow::EditorWindow(QWidget *parent) {
     m_model = new QStandardItemModel(this);
     m_settings = new QGroupBox();
 
-    m_bcTreeView = new QTreeView();
-    m_bcTreeView->setModel(m_model);
+    m_treeView = new QTreeView();
+    m_treeView->setModel(m_model);
 
     QHBoxLayout *upperLayout = new QHBoxLayout;
-    upperLayout->addWidget(m_bcTreeView);
+    upperLayout->addWidget(m_treeView);
     upperLayout->addWidget(m_settings);
-    upperLayout->setStretchFactor(m_bcTreeView, 10);
+    upperLayout->setStretchFactor(m_treeView, 10);
     upperLayout->setStretchFactor(m_settings, 20);
 
     upperBox->setLayout(upperLayout);
@@ -59,7 +59,9 @@ EditorWindow::EditorWindow(QWidget *parent) {
     mainLayout->addWidget(buttonsBox);
 
     connect(m_exportButton, &QPushButton::pressed, this, &EditorWindow::exportFile);
+    connect(m_recalculateButton, &QPushButton::pressed, this, &EditorWindow::recalculateProject);
     connect(this, &EditorWindow::boundaryConditionsParsed, this, &EditorWindow::updateCounter);
+    connect(m_treeView, &QTreeView::clicked, this, &EditorWindow::selectItem);
 
     centralWidget->setLayout(mainLayout);
 }
@@ -85,6 +87,7 @@ void EditorWindow::selectAndOpenFile() {
     ).toStdString();
 
     if (!m_filename.empty()) {
+        std::clog << "Opening \"" << m_filename << "\"...\n";
         m_inputFilestream = std::ifstream(m_filename);
 
         if (m_inputFilestream.good()) {
@@ -97,7 +100,7 @@ void EditorWindow::selectAndOpenFile() {
             catch (const json::exception &e) {
                 std::clog << e.what() << '\n';
                 QMessageBox alert;
-                alert.setText(tr("The selected file is of unsupported format or ill-formed. Try opening another file."));
+                alert.setText(tr("The selected file is of unsupported format, ill-formed or contains unsupported data. Try opening another file."));
                 alert.setStandardButtons(QMessageBox::Ok);
                 alert.exec();
             }
@@ -191,33 +194,6 @@ void EditorWindow::cleanupJsonCache() {
     m_fileContents = json::object();
 }
 
-/*
- * Returns appropriate JSON object which represents provided boundary condition.
- * The behavior is undefined if the provided boundary condition was not previously
- * declared in the input file.
-json &getCorrespondingObject(BoundaryCondition *bc, json &object) {
-    json section = json::object();
-    switch(static_cast<uint32_t>(bc->genericType())) {
-        case static_cast<uint32_t>(BoundaryConditionType::Load): {
-            section = object["loads"];
-            for (auto &bcObj : section) {
-                if (bcObj["type"] == dynamic_cast<Load *>(bc)->loadType && bcObj["id"] == bc->id()) {
-                    return bcObj;
-                }
-            }
-        } break;
-        case static_cast<uint32_t>(BoundaryConditionType::Restraint): {
-            section = object["restraints"];
-            for (auto &bcObj : section) {
-                if (determineRestraintType(bcObj) == dynamic_cast<Restraint *>(bc)->restraintType && bcObj["id"] == bc->id()) {
-                    return bcObj;
-                }
-            }
-        } break;
-    }
-}
-*/
-
 void EditorWindow::updateCounter(size_t bcCount) {
     if (bcCount == 0) {
         if (m_filename.empty())
@@ -231,82 +207,80 @@ void EditorWindow::updateCounter(size_t bcCount) {
 
 void EditorWindow::updateTreeModel() {
     m_model->clear();
-    m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "ID");
+    m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "ID" << "Type");
 
-    /* TODO: rewrite
-    for (const auto &[gtype, name] : m_parsedMetadata.genericTypes) {
-        if (name == "loads") {
-            const auto boundaries = m_boundaryConditions.getGeneric<bc::Load>(gtype);
-        }
-        if (name == "restraints") {
-            const auto boundaries = m_boundaryConditions.getGeneric<bc::Restraint>(gtype);
-        }
-    }
-    std::array<QStandardItem *, 2> primaryBCTypes = { nullptr, nullptr };
-    for (const auto &[type, name] : supportedBoundaryConditions) {
-        if (std::any_of(
-                m_boundaryConditions.cbegin(),
-                m_boundaryConditions.cend(),
-                [type](auto *boundary) { return boundary->type() == type; })
-        ) {
-            primaryBCTypes[i] = new QStandardItem(name.c_str());
-            m_model->appendRow(primaryBCTypes[i]);
-        }
-        i++;
-    }
+    // for each array:
+    //   create QStandardItem for BC section
+    //   append it to model
+    //   for each element in array:
+    //     create QStandardItem
+    //     set text for QStandardItem
+    //     set QStandardItem as a child of the array's QStandardItem
+    //     set child which holds id
+    //     set data for the item:
+    //       - type
+    //       - id
 
-    auto *loads = primaryBCTypes[0];
-    if (loads) {
-        std::array<QStandardItem *, 3> loadGroups;
-        i = 0;
-        for (const auto &[supLoadType, supLoadName] : supportedLoads) {
-            loadGroups[i] = new QStandardItem(supLoadName.c_str());
-            for (auto *bc : m_boundaryConditions) {
-                if (bc->type() == BoundaryConditionType::Load && dynamic_cast<Load *>(bc)->loadType == supLoadType) {
-                    QStandardItem *boundary = new QStandardItem();
-                    boundary->setText(!bc->name().empty() ? bc->name().c_str() : "<no name>");
-                    loadGroups[i]->setChild(bc->id() - 1, boundary);
-                    loadGroups[i]->setChild(bc->id() - 1, 1, new QStandardItem(QString::number(bc->id())));
+    QStandardItem *loadsItem = new QStandardItem("Loads");
+    QStandardItem *restraintsItem = new QStandardItem("Restraints");
+    m_model->appendRow(loadsItem);
+    m_model->appendRow(restraintsItem);
 
-                    boundary->setData((qulonglong)bc->id(), static_cast<int>(ItemRole::ID));
-                    boundary->setData(static_cast<uint32_t>(bc->type()), static_cast<int>(ItemRole::GenericType));
-                    boundary->setData(QString::number(static_cast<uint32_t>(dynamic_cast<Load *>(bc)->loadType)), static_cast<int>(ItemRole::SpecificType));
-                }
-            }
-            loads->setChild(i, loadGroups[i]);
-            i++;
-        }
+    QStandardItem *forcesItem = new QStandardItem("Forces");
+    QStandardItem *pressuresItem = new QStandardItem("Pressures");
+
+    loadsItem->setChild(0, forcesItem);
+    loadsItem->setChild(1, pressuresItem);
+
+    QStandardItem *displacementsItem = new QStandardItem("Displacements");
+
+    restraintsItem->setChild(0, displacementsItem);
+
+    for (const auto &force: m_forces) {
+        QStandardItem *fItem = new QStandardItem(force.name.c_str());
+        forcesItem->setChild(force.id - 1, 0, fItem);
+        forcesItem->setChild(force.id - 1, 1, new QStandardItem(QString::number(force.id)));
+        forcesItem->setChild(force.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(force.type))));
+        fItem->setData(static_cast<uint32_t>(force.id), static_cast<int>(ItemRole::ID));
+        fItem->setData(static_cast<uint32_t>(force.type), static_cast<int>(ItemRole::Type));
+        fItem->setData(static_cast<uint32_t>(BCType::Load), static_cast<int>(ItemRole::BType));
     }
 
-    auto *restraints = primaryBCTypes[1];
-    if (restraints) {
-        std::array<QStandardItem *, 1> restraintGroups = { nullptr };
-        i = 0;
-        for (const auto &[supRestraintType, supRestraintName] : supportedRestraints) {
-            restraintGroups[i] = new QStandardItem(supRestraintName.c_str());
-            for (auto *bc : m_boundaryConditions) {
-                if (bc->type() == BoundaryConditionType::Restraint && dynamic_cast<Restraint *>(bc)->restraintType == supRestraintType) {
-                    QStandardItem *boundary = new QStandardItem();
-                    boundary->setText(!bc->name().empty() ? bc->name().c_str() : "<no name>");
-
-
-                    boundary->setData((qulonglong)bc->id(), ID);
-                    boundary->setData(static_cast<uint32_t>(bc->type()), BCType);
-                    boundary->setData(static_cast<uint32_t>(dynamic_cast<Restraint *>(bc)->restraintType), SpecificType);
-
-                    restraintGroups[i]->setChild(bc->id() - 1, boundary);
-                    restraintGroups[i]->setChild(bc->id() - 1, 1, new QStandardItem(QString::number(bc->id())));
-                }
-            }
-            restraints->setChild(i, restraintGroups[i]);
-            i++;
-        }
-    }
-    */
+    /* TODO: add pressures & displacements handling */
 }
 
 void EditorWindow::selectItem(const QModelIndex &idx) {
     if (!idx.parent().isValid()) { return; }
+
+    auto *item = m_model->itemFromIndex(idx);
+    switch(static_cast<uint32_t>(item->data(static_cast<int>(ItemRole::BType)).toInt())) {
+        case static_cast<uint32_t>(BCType::Load): {
+            bc::ProjectionVector v;
+            const auto t = static_cast<bc::LoadType>(item->data(static_cast<int>(ItemRole::Type)).toInt());
+            const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
+            for (auto &el : m_forces) {
+                if (el.type == t && el.id == id) {
+                    v = el.data;
+                    std::clog
+                        << "Selected item: { name = " << el.name
+                        << ", id = " << id
+                        << ", type = " << static_cast<uint32_t>(t) << ", data = [ ";
+                    for (const auto &vel : v) {
+                        std::clog << vel << " ";
+                    }
+                    std::clog << "] }\n";
+
+                    //sendDataToSettingsWidget<bc::ProjectionVector>(v);
+                }
+            }
+        } break;
+        case static_cast<uint32_t>(BCType::Pressure): {
+            double magnitude;
+        } break;
+        case static_cast<uint32_t>(BCType::Displacement): {
+
+        } break;
+    }
 
     /* TODO: rewrite
     auto *item = m_model->itemFromIndex(idx);
@@ -321,12 +295,16 @@ void EditorWindow::loadParsedData() {
     clearBoundaries();
 
     m_forces = parser.parse<bc::Load, bc::ParsingOrigin::LoadsArray>();
+    std::clog << "Parsed forces: {\n";
     for (const auto &force : m_forces) {
-        std::clog << "=== Forces list ===\n";
+        std::clog << "\t{ id = " << force.id
+            << ", name = " << force.name
+            << ", type = " << static_cast<uint32_t>(force.type)
+            << ", data = [ ";
         for (const auto &el : force.data) {
             std::clog << el << " ";
         }
-        std::clog << '\n';
+        std::clog << "] }\n}\n";
     }
     m_pressures = parser.parse<bc::Pressure, bc::ParsingOrigin::LoadsArray>();
     for (const auto &pr : m_pressures) {

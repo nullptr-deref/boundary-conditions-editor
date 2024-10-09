@@ -13,7 +13,7 @@ namespace bc {
 
     using ProjectionVector = std::array<double, 6>;
     // RestraintFlags marks whether specified DOF is restrained.
-    using RestraintFlags = std::array<bool, 6>;
+    using RestraintFlags = std::array<uint32_t, 6>;
 
     class Restraint : public JSONSerializable<ProjectionVector> {
     public:
@@ -21,6 +21,8 @@ namespace bc {
         ~Restraint() override {}
 
         const RestraintType type;
+        std::string name;
+        size_t id;
 
         ProjectionVector deserialize() override;
         const json serialize() const override;

@@ -20,6 +20,8 @@ namespace bc {
         ~Load() override {}
 
         const LoadType type;
+        std::string name;
+        size_t id;
 
         ProjectionVector deserialize() override;
         const json serialize() const override;
