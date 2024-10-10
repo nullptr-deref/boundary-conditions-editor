@@ -3,7 +3,7 @@
 double bc::Pressure::deserialize() {
     name = p_json["name"];
     id = p_json["id"].template get<size_t>();
-    data = p_json["data"].front();
+    data = p_json["data"].front().front();
 
     return data;
 }

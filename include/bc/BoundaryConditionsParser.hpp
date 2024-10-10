@@ -40,16 +40,16 @@ std::vector<T> bc::BoundaryConditionsParser::parse() const {
     std::vector<T> boundaries;
     if (!m_object->empty()) {
         if constexpr (from == ParsingOrigin::LoadsArray) {
-            const auto accessor = "loads";
+            constexpr auto accessor = "loads";
             if (m_object->contains(accessor)) {
                 for (const auto &obj : (*m_object)[accessor]) {
                     if constexpr (std::is_same<T, Pressure>()) {
-                        if ((*m_object)["type"] == static_cast<uint32_t>(PressureType::Face)) {
+                        if (obj["type"].template get<uint32_t>() == static_cast<uint32_t>(PressureType::Face)) {
                             boundaries.push_back(Pressure(PressureType::Face, obj));
                         }
                     }
                     else {
-                        switch(obj["type"].get<uint32_t>()) {
+                        switch(obj["type"].template get<uint32_t>()) {
                             case static_cast<uint32_t>(LoadType::DeadPointForce): {
                                 boundaries.push_back(Load(LoadType::DeadPointForce, obj));
                             } break;
@@ -64,8 +64,9 @@ std::vector<T> bc::BoundaryConditionsParser::parse() const {
                 }
             }
         }
+
         if constexpr (from == ParsingOrigin::RestraintsArray) {
-            const auto accessor = "restraints";
+            constexpr auto accessor = "restraints";
             if (m_object->contains(accessor)) {
                 for (const auto &obj : (*m_object)[accessor]) {
                     const auto &flags = obj["flag"];
