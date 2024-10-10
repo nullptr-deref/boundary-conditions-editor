@@ -198,7 +198,7 @@ void EditorWindow::updateCounter(size_t bcCount) {
     if (bcCount == 0) {
         if (m_filename.empty())
             m_bcCounter->setText(tr("No file opened."));
-        else m_bcCounter->setText(tr("No boundaries in the file."));
+        else m_bcCounter->setText(tr("No supported boundaries found in the file."));
     }
     else {
         m_bcCounter->setText(tr("Number of detected boundary conditions: %1").arg(bcCount));
@@ -246,6 +246,15 @@ void EditorWindow::updateTreeModel() {
         fItem->setData(static_cast<uint32_t>(BCType::Load), static_cast<int>(ItemRole::BType));
     }
 
+    for (const auto &pressure: m_pressures) {
+        QStandardItem *fItem = new QStandardItem(pressure.name.c_str());
+        forcesItem->setChild(pressure.id - 1, 0, fItem);
+        forcesItem->setChild(pressure.id - 1, 1, new QStandardItem(QString::number(pressure.id)));
+        forcesItem->setChild(pressure.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(pressure.type))));
+        fItem->setData(static_cast<uint32_t>(pressure.id), static_cast<int>(ItemRole::ID));
+        fItem->setData(static_cast<uint32_t>(pressure.type), static_cast<int>(ItemRole::Type));
+        fItem->setData(static_cast<uint32_t>(BCType::Pressure), static_cast<int>(ItemRole::BType));
+    }
     /* TODO: add pressures & displacements handling */
 }
 
@@ -276,6 +285,21 @@ void EditorWindow::selectItem(const QModelIndex &idx) {
         } break;
         case static_cast<uint32_t>(BCType::Pressure): {
             double magnitude;
+            const auto t = static_cast<bc::PressureType>(item->data(static_cast<int>(ItemRole::Type)).toInt());
+            const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
+            for (auto &el : m_pressures) {
+                if (el.type == t && el.id == id) {
+                    magnitude = el.data;
+                    std::clog
+                        << "Selected item: { name = " << el.name
+                        << ", id = " << id
+                        << ", type = " << static_cast<uint32_t>(t)
+                        << ", data = " << magnitude
+                        << " }\n";
+
+                    //sendDataToSettingsWidget<bc::ProjectionVector>(v);
+                }
+            }
         } break;
         case static_cast<uint32_t>(BCType::Displacement): {
 
@@ -295,34 +319,30 @@ void EditorWindow::loadParsedData() {
     clearBoundaries();
 
     m_forces = parser.parse<bc::Load, bc::ParsingOrigin::LoadsArray>();
-    std::clog << "Parsed forces: {\n";
-    for (const auto &force : m_forces) {
-        std::clog << "\t{ id = " << force.id
-            << ", name = " << force.name
-            << ", type = " << static_cast<uint32_t>(force.type)
-            << ", data = [ ";
-        for (const auto &el : force.data) {
-            std::clog << el << " ";
+    if (!m_forces.empty()) {
+        std::clog << "forces: {\n";
+        for (const auto &force : m_forces) {
+            std::clog << force << ",\n";
         }
-        std::clog << "] }\n}\n";
+        std::clog << "}\n";
     }
+
     m_pressures = parser.parse<bc::Pressure, bc::ParsingOrigin::LoadsArray>();
-    for (const auto &pr : m_pressures) {
-        std::clog << "=== Pressures list ===\n";
-        std::clog << pr.data;
-        std::clog << '\n';
+    if (!m_pressures.empty()) {
+        std::clog << "pressures: {\n";
+        for (const auto &pr : m_pressures) {
+            std::clog << pr << ",\n";
+        }
+        std::clog << "}\n";
     }
+
     m_displacements = parser.parse<bc::Restraint, bc::ParsingOrigin::RestraintsArray>();
-    for (const auto &displ : m_displacements) {
-        std::clog << "=== Displacements list ===\n";
-        for (const auto &el : displ.data) {
-            std::clog << el << " ";
+    if (!m_displacements.empty()) {
+        std::clog << "displacements: {\n";
+        for (const auto &d : m_displacements) {
+            std::clog << d << ",\n";
         }
-        std::clog << '\n';
-        for (const auto &f : displ.flags) {
-            std::clog << f << " ";
-        }
-        std::clog << '\n';
+        std::clog << "}\n";
     }
 
     m_fileCurrentlyOpened = true;
