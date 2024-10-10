@@ -28,7 +28,8 @@ EditorWindow::EditorWindow(QWidget *parent) {
 
     QGroupBox *upperBox = new QGroupBox(tr("Boundary conditions"), centralWidget);
     m_model = new QStandardItemModel(this);
-    m_settings = new QGroupBox();
+    m_settings = new QGroupBox("Boundary condition settings", centralWidget);
+    m_settings->setLayout(new QVBoxLayout);
 
     m_treeView = new QTreeView();
     m_treeView->setModel(m_model);
@@ -121,7 +122,14 @@ void EditorWindow::selectAndOpenFile() {
     }
 }
 
-void EditorWindow::closeFile() {}
+// TODO: implement
+void EditorWindow::closeFile() {
+    if (m_inputFilestream.is_open()) {
+        m_inputFilestream.close();
+        m_filename.clear();
+    }
+}
+
 void EditorWindow::recalculateProject() {
     QMessageBox notImplementedAlert;
     notImplementedAlert.setText(tr("This feature is not yet implemented."));
@@ -162,6 +170,7 @@ void EditorWindow::exportFile() {
     }
 }
 
+// TODO: implement
 void EditorWindow::quit() {}
 
 void EditorWindow::prepareInternalActions() {
@@ -282,10 +291,13 @@ void EditorWindow::selectItem(const QModelIndex &idx) {
             const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
             for (auto &el : m_forces) {
                 if (el.type == t && el.id == id) {
-                    bc::ProjectionVector &v = el.data;
                     std::clog << "Selected item: " << el << '\n';
-
-                    //sendDataToSettingsWidget<bc::ProjectionVector>(v);
+                    m_selectedItem = Selection {
+                        .id = id,
+                        .type = static_cast<uint32_t>(t),
+                        .btype = static_cast<BCType>(item->data(static_cast<int>(ItemRole::BType)).toInt())
+                    };
+                    constructSettingsWidget<bc::ProjectionVector>(el.data);
                 }
             }
         } break;
@@ -294,10 +306,13 @@ void EditorWindow::selectItem(const QModelIndex &idx) {
             const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
             for (auto &el : m_pressures) {
                 if (el.type == t && el.id == id) {
-                    double &magnitude = el.data;
                     std::clog << "Selected item: " << el << '\n';
-
-                    //sendDataToSettingsWidget<bc::ProjectionVector>(v);
+                    m_selectedItem = Selection {
+                        .id = id,
+                        .type = static_cast<uint32_t>(t),
+                        .btype = static_cast<BCType>(item->data(static_cast<int>(ItemRole::BType)).toInt())
+                    };
+                    constructSettingsWidget<double>(el.data);
                 }
             }
         } break;
@@ -306,10 +321,14 @@ void EditorWindow::selectItem(const QModelIndex &idx) {
             const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
             for (auto &el : m_displacements) {
                 if (el.type == t && el.id == id) {
-                    bc::ProjectionVector v = el.data;
+                    std::pair<bc::ProjectionVector, bc::RestraintFlags> vs = { el.data, el.flags };
                     std::clog << "Selected item: " << el << '\n';
-
-                    //sendDataToSettingsWidget<bc::ProjectionVector>(v);
+                    m_selectedItem = Selection {
+                        .id = id,
+                        .type = static_cast<uint32_t>(t),
+                        .btype = static_cast<BCType>(item->data(static_cast<int>(ItemRole::BType)).toInt())
+                    };
+                    constructSettingsWidget<std::pair<bc::ProjectionVector, bc::RestraintFlags>>(vs);
                 }
             }
         } break;
@@ -357,4 +376,127 @@ void EditorWindow::clearBoundaries() {
     m_forces.clear();
     m_pressures.clear();
     m_displacements.clear();
+}
+
+void EditorWindow::writeChangesToSelectedItem(const QString &s) {
+    const auto stdS = s.toStdString();
+    if (std::any_of(stdS.cbegin(), stdS.cend(), [](char c) { return std::isdigit(c); })) {
+        switch(static_cast<uint32_t>(m_selectedItem.btype)) {
+            case static_cast<uint32_t>(BCType::Load): {
+                for (auto &f : m_forces) {
+                    if (f.id == m_selectedItem.id &&
+                        static_cast<uint32_t>(f.type) == m_selectedItem.type
+                    ) {
+                        std::clog << "Updating data for the: force = " << f;
+                        for (size_t i = 0; i < 6; i++) {
+                            f.data[i] = std::stod(m_editors[i]->text().toStdString());
+                        }
+                        std::clog << " -> " << f << '\n';
+                    }
+                }
+            } break;
+            case static_cast<uint32_t>(BCType::Pressure): {
+                for (auto &p : m_pressures) {
+                    if (p.id == m_selectedItem.id &&
+                        static_cast<uint32_t>(p.type) == m_selectedItem.type
+                    ) {
+                        std::clog << "Updating data for the: pressure = " << p << '\n';
+                        p.data = std::stod(m_editors[0]->text().toStdString());
+                        std::clog << " -> " << p << '\n';
+                    }
+                }
+            } break;
+            case static_cast<uint32_t>(BCType::Displacement): {
+                for (auto &d : m_displacements) {
+                    if (d.id == m_selectedItem.id &&
+                        static_cast<uint32_t>(d.type) == m_selectedItem.type
+                    ) {
+                        std::clog << "Updating data for the: displacement = " << d << '\n';
+                        for (size_t i = 0; i < 6; i++) {
+                            d.data[i] = std::stod(m_editors[i]->text().toStdString());
+                            // TODO: write flags updating
+                        }
+                        std::clog << " -> " << d << '\n';
+                    }
+                }
+            } break;
+        }
+    }
+}
+
+void EditorWindow::constructForcesWidget() {
+    m_forcesSettingsWidget = new QWidget();
+    QVBoxLayout *l = new QVBoxLayout();
+    QGridLayout *grid = new QGridLayout();
+
+    grid->addWidget(new QLabel("Force linear magnitude"), 1, 0);
+    grid->addWidget(new QLabel("Moment"), 2, 0);
+
+    if (std::any_of(m_editors.cbegin(), m_editors.cend(), [](auto *e) { return e == nullptr; })) {
+        initializeSettingsEditors();
+    }
+
+    const std::array<QString, 3> labels = { "X", "Y", "Z" };
+    size_t i = 0;
+    for (const auto &label : labels) {
+        grid->addWidget(new QLabel(label), 0, i + 1);
+        grid->addWidget(m_editors[i], 1, i + 1); // linear component
+        grid->addWidget(m_editors[i + 3], 2, i + 1); // rotary component
+        i++;
+    }
+
+    l->addLayout(grid);
+    l->addStretch();
+    m_forcesSettingsWidget->setLayout(l);
+}
+
+void EditorWindow::constructPressuresWidget() {
+    m_pressuresSettingsWidget = new QWidget();
+    QVBoxLayout *l = new QVBoxLayout();
+    QGridLayout *grid = new QGridLayout();
+
+    grid->addWidget(new QLabel("Pressure magnitude"), 0, 0);
+
+    if (std::any_of(m_editors.cbegin(), m_editors.cend(), [](auto *e) { return e == nullptr; })) {
+        initializeSettingsEditors();
+    }
+
+    grid->addWidget(m_editors[0], 0, 1); // linear component
+
+    l->addLayout(grid);
+    l->addStretch();
+    m_pressuresSettingsWidget->setLayout(l);
+}
+void EditorWindow::constructDisplacementsWidget() {
+    m_displacementsSettingsWidget = new QWidget();
+    QVBoxLayout *l = new QVBoxLayout();
+    QGridLayout *grid = new QGridLayout();
+
+    grid->addWidget(new QLabel("Linear"), 1, 0);
+    grid->addWidget(new QLabel("Rotary"), 2, 0);
+
+    if (std::any_of(m_editors.cbegin(), m_editors.cend(), [](auto *e) { return e == nullptr; })) {
+        initializeSettingsEditors();
+    }
+
+    const std::array<QString, 3> labels = { "X", "Y", "Z" };
+    size_t i = 0;
+    for (const auto &label : labels) {
+        grid->addWidget(new QLabel(label), 0, i + 1);
+        grid->addWidget(m_editors[i], 1, i + 1); // linear component
+        grid->addWidget(m_editors[i + 3], 2, i + 1); // rotary component
+        i++;
+    }
+
+    l->addLayout(grid);
+    l->addStretch();
+    m_displacementsSettingsWidget->setLayout(l);
+}
+
+void EditorWindow::initializeSettingsEditors() {
+    for (size_t i = 0; i < m_editors.size(); i++) {
+        m_editors[i] = new QLineEdit();
+        m_editors[i]->setValidator(new QDoubleValidator);
+        connect(m_editors[i], &QLineEdit::textEdited, this, &EditorWindow::writeChangesToSelectedItem);
+    }
 }
