@@ -171,37 +171,46 @@ void EditorWindow::exportFile() {
 }
 
 // TODO: implement
-void EditorWindow::quit() {}
+void EditorWindow::quit() {
+    close();
+}
 
 void EditorWindow::prepareInternalActions() {
-    m_openFileAction = std::make_shared<QAction>();
-    m_openFileAction->setText(tr("&Open file"));
-    connect(m_openFileAction.get(), &QAction::triggered, this, &EditorWindow::selectAndOpenFile);
+    size_t i = 0;
+    for (auto &a : m_actions) {
+        a = std::make_shared<QAction>();
+        a->setText(m_actionNames[i].c_str());
+        connect(a.get(), &QAction::triggered, this, m_signals[i]);
+        i++;
+    }
+    //m_openFileAction = std::make_shared<QAction>();
+    //m_openFileAction->setText(tr("&Open file"));
+    //connect(m_openFileAction.get(), &QAction::triggered, this, &EditorWindow::selectAndOpenFile);
 
-    m_closeFileAction = std::make_shared<QAction>();
-    m_closeFileAction->setText(tr("&Close"));
+    //m_closeFileAction = std::make_shared<QAction>();
+    //m_closeFileAction->setText(tr("&Close"));
 
 
-    m_recalculateProjectAction = std::make_shared<QAction>();
-    m_recalculateProjectAction->setText(tr("&Recalculate project"));
+    //m_recalculateProjectAction = std::make_shared<QAction>();
+    //m_recalculateProjectAction->setText(tr("&Recalculate project"));
 
-    m_exportFileAction = std::make_shared<QAction>();
-    m_exportFileAction->setText(tr("&Export"));
+    //m_exportFileAction = std::make_shared<QAction>();
+    //m_exportFileAction->setText(tr("&Export"));
 
-    m_quitAction = std::make_shared<QAction>();
-    m_quitAction->setText(tr("&Quit"));
+    //m_quitAction = std::make_shared<QAction>();
+    //m_quitAction->setText(tr("&Quit"));
 }
 
 void EditorWindow::prepareMenus() {
     m_fileMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&File")));
-    m_fileMenu->addAction(m_openFileAction.get());
-    m_fileMenu->addAction(m_exportFileAction.get());
-    m_fileMenu->addAction(m_closeFileAction.get());
+    m_fileMenu->addAction(m_actions[0].get());
+    m_fileMenu->addAction(m_actions[3].get());
+    m_fileMenu->addAction(m_actions[1].get());
     m_fileMenu->addSeparator();
-    m_fileMenu->addAction(m_quitAction.get());
+    m_fileMenu->addAction(m_actions[4].get());
 
     m_projectMenu = std::shared_ptr<QMenu>(menuBar()->addMenu(tr("&Project")));
-    m_projectMenu->addAction(m_recalculateProjectAction.get());
+    m_projectMenu->addAction(m_actions[2].get());
 }
 
 void EditorWindow::cleanupJsonCache() {
@@ -222,18 +231,6 @@ void EditorWindow::updateCounter(size_t bcCount) {
 void EditorWindow::updateTreeModel() {
     m_model->clear();
     m_model->setHorizontalHeaderLabels(QStringList() << "Boundary condition" << "ID" << "Type");
-
-    // for each array:
-    //   create QStandardItem for BC section
-    //   append it to model
-    //   for each element in array:
-    //     create QStandardItem
-    //     set text for QStandardItem
-    //     set QStandardItem as a child of the array's QStandardItem
-    //     set child which holds id
-    //     set data for the item:
-    //       - type
-    //       - id
 
     QStandardItem *loadsItem = new QStandardItem("Loads");
     QStandardItem *restraintsItem = new QStandardItem("Restraints");
@@ -385,7 +382,7 @@ void EditorWindow::writeChangesToSelectedItem(const std::optional<std::string> &
                 if (f.id == m_selectedItem.id &&
                     static_cast<uint32_t>(f.type) == m_selectedItem.type
                 ) {
-                    std::clog << "Updating data for the: force = " << f;
+                    std::clog << "Writing modified data to the proxy object: force = " << f;
                     if (optS &&
                         std::any_of(optS.value().cbegin(),
                             optS.value().cend(),
@@ -403,7 +400,7 @@ void EditorWindow::writeChangesToSelectedItem(const std::optional<std::string> &
                 if (p.id == m_selectedItem.id &&
                     static_cast<uint32_t>(p.type) == m_selectedItem.type
                 ) {
-                    std::clog << "Updating data for the: pressure = " << p << '\n';
+                    std::clog << "Writing modified data to the proxy object: pressure = " << p << '\n';
                     if (optS &&
                         std::any_of(optS.value().cbegin(),
                             optS.value().cend(),
@@ -419,7 +416,7 @@ void EditorWindow::writeChangesToSelectedItem(const std::optional<std::string> &
                 if (d.id == m_selectedItem.id &&
                     static_cast<uint32_t>(d.type) == m_selectedItem.type
                 ) {
-                    std::clog << "Updating data for the: displacement = " << d << '\n';
+                    std::clog << "Writing modified data to the proxy object: displacement = " << d << '\n';
                     if (optS &&
                         std::any_of(optS.value().cbegin(),
                             optS.value().cend(),
@@ -462,6 +459,7 @@ void EditorWindow::constructForcesWidget() {
         grid->addWidget(m_editors[i + 3], 2, i + 1); // rotary component
         i++;
     }
+    grid->setSpacing(10);
     grid->addWidget(new QLabel(tr("mm")), 1, i + 1);
     grid->addWidget(new QLabel(tr("Nm")), 2, i + 1);
 
@@ -473,15 +471,15 @@ void EditorWindow::constructForcesWidget() {
 void EditorWindow::constructPressuresWidget() {
     m_pressuresSettingsWidget = new QWidget();
     QVBoxLayout *l = new QVBoxLayout();
-    QGridLayout *grid = new QGridLayout();
+    QHBoxLayout *grid = new QHBoxLayout();
 
-    grid->addWidget(new QLabel("Pressure magnitude"), 0, 0);
+    grid->addWidget(new QLabel("Pressure magnitude"));
 
     if (std::any_of(m_editors.cbegin(), m_editors.cend(), [](auto *e) { return e == nullptr; })) {
         initializeSettingsEditors();
     }
 
-    grid->addWidget(m_editors[0], 0, 1); // linear component
+    grid->addWidget(m_editors.back()); // linear component
 
     l->addLayout(grid);
     l->addStretch();
@@ -506,22 +504,23 @@ void EditorWindow::constructDisplacementsWidget() {
     size_t i = 0;
     for (const auto &label : labels) {
         QHBoxLayout *l1 = new QHBoxLayout;
+        l1->addWidget(m_checks[i]);
+        l1->addSpacing(8);
         l1->addWidget(m_editors[i]);
         l1->addWidget(new QLabel(tr("mm")));
-        l1->addSpacing(8);
-        l1->addWidget(m_checks[i]);
 
         QHBoxLayout *l2 = new QHBoxLayout;
+        l2->addWidget(m_checks[i + 3]);
+        l2->addSpacing(8);
         l2->addWidget(m_editors[i + 3]);
         l2->addWidget(new QLabel(tr("deg")));
-        l2->addSpacing(8);
-        l2->addWidget(m_checks[i + 3]);
 
         grid->addWidget(new QLabel(label), 0, i + 1);
         grid->addLayout(l1, 1, i + 1); // linear component
         grid->addLayout(l2, 2, i + 1); // rotary component
         i++;
     }
+    grid->setSpacing(10);
 
     l->addLayout(grid);
     l->addStretch();
@@ -546,7 +545,13 @@ void EditorWindow::initializeSettingsEditors() {
 void EditorWindow::initializeSettingsCheckboxes() {
     for (size_t i = 0; i < m_checks.size(); i++) {
         m_checks[i] = new QCheckBox();
-        connect(
+    }
+    connectCheckBoxes();
+}
+
+void EditorWindow::connectCheckBoxes() {
+    for (size_t i = 0; i < m_checks.size(); i++) {
+        m_checkBoxesConnections[i] = connect(
             m_checks[i],
             &QCheckBox::checkStateChanged,
             this,
@@ -554,5 +559,11 @@ void EditorWindow::initializeSettingsCheckboxes() {
                 writeChangesToSelectedItem(std::optional<std::string>(), std::make_optional(cs));
             }
         );
+    }
+}
+
+void EditorWindow::disconnectCheckBoxes() {
+    for (size_t i = 0; i < m_checks.size(); i++) {
+        QObject::disconnect(m_checkBoxesConnections[i]);
     }
 }

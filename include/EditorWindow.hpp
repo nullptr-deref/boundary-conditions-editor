@@ -42,6 +42,15 @@ private:
     std::string m_filename = "";
     std::ifstream m_inputFilestream;
 
+    std::array<std::shared_ptr<QAction>, 5> m_actions = { nullptr };
+    std::array<std::string, 5> m_actionNames {
+        "&Open file",
+        "&Close",
+        "&Recalculate project",
+        "&Export",
+        "&Quit"
+    };
+
     std::shared_ptr<QAction> m_openFileAction = nullptr;
     std::shared_ptr<QAction> m_closeFileAction = nullptr;
     std::shared_ptr<QAction> m_recalculateProjectAction = nullptr;
@@ -105,11 +114,15 @@ private:
     void initializeSettingsEditors();
     void initializeSettingsCheckboxes();
 
+    std::array<QMetaObject::Connection, 6> m_checkBoxesConnections;
+    void disconnectCheckBoxes();
+    void connectCheckBoxes();
+
     void updateTreeModel();
     template <typename T>
-    void constructSettingsWidget(T &data);
+    void constructSettingsWidget(const T &data);
 
-    std::array<QLineEdit *, 6> m_editors = { nullptr };
+    std::array<QLineEdit *, 7> m_editors = { nullptr };
     std::array<QCheckBox *, 6> m_checks = { nullptr };
 
     bool m_fileCurrentlyOpened = false;
@@ -120,6 +133,8 @@ private slots:
 
     void selectItem(const QModelIndex &idx);
 
+    void writeChangesToSelectedItem(const std::optional<std::string> &optS, const std::optional<Qt::CheckState> &optCs);
+
     // Slots which will be executed upon
     // QAction trigger.
     void selectAndOpenFile();
@@ -128,7 +143,14 @@ private slots:
     void exportFile();
     void quit();
 
-    void writeChangesToSelectedItem(const std::optional<std::string> &optS, const std::optional<Qt::CheckState> &optCs);
+private:
+    std::array<void (EditorWindow::*)(void), 5> m_signals = {
+        &EditorWindow::selectAndOpenFile,
+        &EditorWindow::closeFile,
+        &EditorWindow::recalculateProject,
+        &EditorWindow::exportFile,
+        &EditorWindow::quit
+    };
 
 signals:
     void fileOpened(const std::string_view &filename);
@@ -137,7 +159,7 @@ signals:
 };
 
 template <typename T>
-void EditorWindow::constructSettingsWidget(T &data) {
+void EditorWindow::constructSettingsWidget(const T &data) {
     if (m_currentSettingsWidget) {
         m_currentSettingsWidget->hide();
         m_settings->layout()->removeWidget(m_currentSettingsWidget);
@@ -157,6 +179,7 @@ void EditorWindow::constructSettingsWidget(T &data) {
         if (!m_pressuresSettingsWidget) {
             constructPressuresWidget();
         }
+        m_editors.back()->setText(QString::number(data));
         m_currentSettingsWidget = m_pressuresSettingsWidget;
     }
     // Passing two 6-element vectors to deal with displacements
@@ -165,10 +188,17 @@ void EditorWindow::constructSettingsWidget(T &data) {
             constructDisplacementsWidget();
         }
         size_t i = 0;
+        disconnectCheckBoxes();
         for (auto *e : m_editors) {
             e->setText(QString::number(data.first[i]));
             i++;
         }
+        i = 0;
+        for (auto *c: m_checks) {
+            c->setCheckState(data.second[i] == 0 ? Qt::Unchecked : Qt::Checked);
+            i++;
+        }
+        connectCheckBoxes();
         m_currentSettingsWidget = m_displacementsSettingsWidget;
     }
 
