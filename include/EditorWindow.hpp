@@ -9,16 +9,21 @@
 using json = nlohmann::json;
 
 #include <QAction>
+#include <QCheckBox>
+#include <QDoubleValidator>
 #include <QGroupBox>
+#include <QGridLayout>
 #include <QMainWindow>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
+#include <QLineEdit>
 #include <QTreeView>
 
 #include <array>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -46,6 +51,7 @@ private:
     std::shared_ptr<QMenu> m_fileMenu = nullptr;
     std::shared_ptr<QMenu> m_projectMenu = nullptr;
 
+
     void prepareInternalActions();
     void prepareMenus();
 
@@ -62,14 +68,6 @@ private:
     std::vector<bc::Restraint> m_displacements;
     void clearBoundaries();
 
-    size_t m_selectedItemIndex;
-
-    void loadParsedData();
-
-    QTreeView *m_treeView = nullptr;
-    QGroupBox *m_settings = nullptr;
-    QStandardItemModel *m_model = nullptr;
-
     enum struct ItemRole : int {
         ID = Qt::UserRole,
         Type,
@@ -82,9 +80,37 @@ private:
         Displacement
     };
 
+    struct Selection {
+        size_t id;
+        uint32_t type;
+        BCType btype;
+    } m_selectedItem;
+
+    void loadParsedData();
+
+    QTreeView *m_treeView = nullptr;
+    QGroupBox *m_settings = nullptr;
+
+    QWidget *m_forcesSettingsWidget = nullptr;
+    QWidget *m_pressuresSettingsWidget = nullptr;
+    QWidget *m_displacementsSettingsWidget = nullptr;
+    QWidget *m_currentSettingsWidget = nullptr;
+
+    QStandardItemModel *m_model = nullptr;
+
+    void constructForcesWidget();
+    void constructPressuresWidget();
+    void constructDisplacementsWidget();
+
+    void initializeSettingsEditors();
+    void initializeSettingsCheckboxes();
+
     void updateTreeModel();
     template <typename T>
-    void sendDataToSettingsWidget(T &data);
+    void constructSettingsWidget(T &data);
+
+    std::array<QLineEdit *, 6> m_editors = { nullptr };
+    std::array<QCheckBox *, 6> m_checks = { nullptr };
 
     bool m_fileCurrentlyOpened = false;
 
@@ -102,6 +128,8 @@ private slots:
     void exportFile();
     void quit();
 
+    void writeChangesToSelectedItem(const std::optional<std::string> &optS, const std::optional<Qt::CheckState> &optCs);
+
 signals:
     void fileOpened(const std::string_view &filename);
     void boundaryConditionsParsed(size_t count);
@@ -109,12 +137,41 @@ signals:
 };
 
 template <typename T>
-void EditorWindow::sendDataToSettingsWidget(T &data) {
+void EditorWindow::constructSettingsWidget(T &data) {
+    if (m_currentSettingsWidget) {
+        m_currentSettingsWidget->hide();
+        m_settings->layout()->removeWidget(m_currentSettingsWidget);
+    }
     if constexpr (std::is_same<T, bc::ProjectionVector>()) {
+        if (!m_forcesSettingsWidget) {
+            constructForcesWidget();
+        }
+        size_t i = 0;
+        for (auto *e : m_editors) {
+            e->setText(QString::number(data[i]));
+            i++;
+        }
+        m_currentSettingsWidget = m_forcesSettingsWidget;
     }
     if constexpr (std::is_same<T, double>()) {
+        if (!m_pressuresSettingsWidget) {
+            constructPressuresWidget();
+        }
+        m_currentSettingsWidget = m_pressuresSettingsWidget;
     }
     // Passing two 6-element vectors to deal with displacements
-    if constexpr (std::is_same<T, std::array<bc::ProjectionVector, 2>>()) {
+    if constexpr (std::is_same<T, std::pair<bc::ProjectionVector, bc::RestraintFlags>>()) {
+        if (!m_displacementsSettingsWidget) {
+            constructDisplacementsWidget();
+        }
+        size_t i = 0;
+        for (auto *e : m_editors) {
+            e->setText(QString::number(data.first[i]));
+            i++;
+        }
+        m_currentSettingsWidget = m_displacementsSettingsWidget;
     }
+
+    m_settings->layout()->addWidget(m_currentSettingsWidget);
+    m_currentSettingsWidget->show();
 }
