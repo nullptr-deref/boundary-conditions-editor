@@ -9,11 +9,14 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QHeaderView>
-#include <QStandardPaths>
 #include <QScrollArea>
+#include <QStandardPaths>
+#include <QStatusBar>
 #include <QVBoxLayout>
 
 #include <iostream>
+
+constexpr size_t STATUS_TIMEOUT = 5000;
 
 EditorWindow::EditorWindow(QWidget *parent) {
     prepareInternalActions();
@@ -70,6 +73,8 @@ EditorWindow::EditorWindow(QWidget *parent) {
     centralWidget->setLayout(mainLayout);
 
     resize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+    statusBar()->showMessage("Welcome to the Boundary Conditions Editor!", STATUS_TIMEOUT);
 }
 
 EditorWindow::~EditorWindow() {}
@@ -93,7 +98,6 @@ void EditorWindow::selectAndOpenFile() {
     ).toStdString();
 
     if (!m_filename.empty()) {
-        std::clog << "Opening \"" << m_filename << "\"...\n";
         m_inputFilestream = std::ifstream(m_filename);
 
         if (m_inputFilestream.good()) {
@@ -101,19 +105,29 @@ void EditorWindow::selectAndOpenFile() {
                 loadParsedData();
                 updateTreeModel();
 
+                const std::string msg = "Opened \"" + m_filename + "\".";
+                std::clog << msg << '\n';
+                statusBar()->showMessage(msg.c_str(), STATUS_TIMEOUT);
+
                 emit fileOpened(m_filename);
             }
             catch (const json::exception &e) {
                 std::clog << e.what() << '\n';
+                const std::string msg = "The selected file is of unsupported format, ill-formed or contains unsupported data. Try opening another file.";
+                statusBar()->showMessage(msg.c_str(), STATUS_TIMEOUT);
+
                 QMessageBox alert;
-                alert.setText(tr("The selected file is of unsupported format, ill-formed or contains unsupported data. Try opening another file."));
+                alert.setText(tr(msg.c_str()));
                 alert.setStandardButtons(QMessageBox::Ok);
                 alert.exec();
             }
         }
         else {
+            const std::string msg = "The selected file could not be opened due to read error. Try selecting another file or checking the selected file integrity.";
+            statusBar()->showMessage(msg.c_str(), STATUS_TIMEOUT);
+
             QMessageBox badFileAlert;
-            badFileAlert.setText(tr("The selected file could not be opened due to read error. Try selecting another file or checking the selected file integrity."));
+            badFileAlert.setText(tr(msg.c_str()));
             badFileAlert.setStandardButtons(QMessageBox::Ok);
             badFileAlert.exec();
 
@@ -126,47 +140,64 @@ void EditorWindow::selectAndOpenFile() {
 void EditorWindow::closeFile() {
     if (m_inputFilestream.is_open()) {
         m_inputFilestream.close();
+        const std::string msg = "Closed file \"" + m_filename + "\".";
+        std::clog << msg << '\n';
+        statusBar()->showMessage(msg.c_str(), STATUS_TIMEOUT);
+
         m_filename.clear();
+        m_model->clear();
+        m_currentSettingsWidget->hide();
     }
 }
 
 void EditorWindow::recalculateProject() {
+    const std::string msg = "This feature is not yet implemented.";
     QMessageBox notImplementedAlert;
-    notImplementedAlert.setText(tr("This feature is not yet implemented."));
+    notImplementedAlert.setText(tr(msg.c_str()));
     notImplementedAlert.setStandardButtons(QMessageBox::Ok);
     notImplementedAlert.exec();
+
+    statusBar()->showMessage(msg.c_str(), STATUS_TIMEOUT);
 }
 
 void EditorWindow::exportFile() {
-    auto contentsCopy = m_fileContents;
+    if (m_fileCurrentlyOpened) {
+        auto contentsCopy = m_fileContents;
 
-    json loads = json::array();
-    for (auto &force : m_forces) {
-        loads.push_back(force.serialize());
+        json loads = json::array();
+        for (auto &force : m_forces) {
+            loads.push_back(force.serialize());
+        }
+        for (auto &pressure : m_pressures) {
+            loads.push_back(pressure.serialize());
+        }
+
+        json restraints = json::array();
+        for (const auto &displ : m_displacements) {
+            restraints.push_back(displ.serialize());
+        }
+
+        contentsCopy["loads"] = loads;
+        contentsCopy["restraints"] = restraints;
+
+        const std::string exportedFileName = QFileDialog::getSaveFileName(
+            this,
+            tr("Open file"),
+            QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+            tr("Fidesys Case Files (*.fc);;All files (*.*)")
+        ).toStdString();
+
+        if (!exportedFileName.empty()) {
+            std::ofstream outputFileStream(exportedFileName);
+            const auto prettied = contentsCopy.dump(4);
+            outputFileStream << prettied;
+            const std::string msg = "Exported data to the file \"" + exportedFileName + "\".";
+            std::clog << msg << '\n';
+            statusBar()->showMessage(msg.c_str(), STATUS_TIMEOUT);
+        }
     }
-    for (auto &pressure : m_pressures) {
-        loads.push_back(pressure.serialize());
-    }
-
-    json restraints = json::array();
-    for (const auto &displ : m_displacements) {
-        restraints.push_back(displ.serialize());
-    }
-
-    contentsCopy["loads"] = loads;
-    contentsCopy["restraints"] = restraints;
-
-    const std::string exportedFileName = QFileDialog::getSaveFileName(
-        this,
-        tr("Open file"),
-        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
-        tr("Fidesys Case Files (*.fc);;All files (*.*)")
-    ).toStdString();
-
-    if (!exportedFileName.empty()) {
-        std::ofstream outputFileStream(exportedFileName);
-        const auto prettied = contentsCopy.dump(4);
-        outputFileStream << prettied;
+    else {
+        statusBar()->showMessage("No file is currently opened!", STATUS_TIMEOUT);
     }
 }
 
@@ -183,22 +214,6 @@ void EditorWindow::prepareInternalActions() {
         connect(a.get(), &QAction::triggered, this, m_signals[i]);
         i++;
     }
-    //m_openFileAction = std::make_shared<QAction>();
-    //m_openFileAction->setText(tr("&Open file"));
-    //connect(m_openFileAction.get(), &QAction::triggered, this, &EditorWindow::selectAndOpenFile);
-
-    //m_closeFileAction = std::make_shared<QAction>();
-    //m_closeFileAction->setText(tr("&Close"));
-
-
-    //m_recalculateProjectAction = std::make_shared<QAction>();
-    //m_recalculateProjectAction->setText(tr("&Recalculate project"));
-
-    //m_exportFileAction = std::make_shared<QAction>();
-    //m_exportFileAction->setText(tr("&Export"));
-
-    //m_quitAction = std::make_shared<QAction>();
-    //m_quitAction->setText(tr("&Quit"));
 }
 
 void EditorWindow::prepareMenus() {
@@ -405,7 +420,7 @@ void EditorWindow::writeChangesToSelectedItem(const std::optional<std::string> &
                         std::any_of(optS.value().cbegin(),
                             optS.value().cend(),
                             [](char c) { return std::isdigit(c); })) {
-                        p.data = std::stod(m_editors[0]->text().toStdString());
+                        p.data = std::stod(m_editors[PRESSURE_EDITOR_IDX]->text().toStdString());
                     }
                     std::clog << " -> " << p << '\n';
                 }
