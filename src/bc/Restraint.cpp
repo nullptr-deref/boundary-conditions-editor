@@ -22,3 +22,20 @@ const json bc::Restraint::serialize() const {
 
     return copy;
 }
+
+std::ostream &bc::operator<<(std::ostream &o, const bc::Restraint &r) {
+    o << "\t{ id = " << r.id
+        << ", name = \"" << r.name << "\""
+        << ", type = " << static_cast<uint32_t>(r.type)
+        << ", data = [ ";
+    for (const auto &el : r.data) {
+        o << el << " ";
+    }
+    o << "], flags = [ ";
+    for (const auto &f : r.flags) {
+        o << f << " ";
+    }
+    o << "] }\n";
+
+    return o;
+}

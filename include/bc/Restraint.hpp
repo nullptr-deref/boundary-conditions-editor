@@ -3,6 +3,7 @@
 #include "../JSONSerializable.hpp"
 
 #include <array>
+#include <iostream>
 
 namespace bc {
     enum struct RestraintType : uint32_t {
@@ -28,5 +29,9 @@ namespace bc {
         const json serialize() const override;
 
         RestraintFlags flags;
+
+        friend std::ostream &operator<<(std::ostream &, const Restraint &);
     };
+
+    std::ostream &operator<<(std::ostream &, const Restraint &);
 } // namespace bc

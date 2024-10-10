@@ -15,3 +15,13 @@ const json bc::Pressure::serialize() const {
 
     return copy;
 }
+
+std::ostream &bc::operator<<(std::ostream &o, const bc::Pressure &p) {
+    o << "\t{ id = " << p.id
+        << ", name = " << p.name
+        << ", type = " << static_cast<uint32_t>(p.type)
+        << ", data = " << p.data
+        << " }";
+
+    return o;
+}

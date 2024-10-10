@@ -3,6 +3,7 @@
 #include "../JSONSerializable.hpp"
 
 #include <array>
+#include <iostream>
 
 namespace bc {
     // Seems like commented out types of loads are not supported in non-binary export.
@@ -24,5 +25,9 @@ namespace bc {
 
         double deserialize() override;
         const json serialize() const override;
+
+        friend std::ostream &operator<<(std::ostream &, const Pressure &);
     };
+
+    std::ostream &operator<<(std::ostream &, const Pressure &);
 } // namespace bc
