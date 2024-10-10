@@ -24,7 +24,7 @@ const json bc::Restraint::serialize() const {
 }
 
 std::ostream &bc::operator<<(std::ostream &o, const bc::Restraint &r) {
-    o << "\t{ id = " << r.id
+    o << "{ id = " << r.id
         << ", name = \"" << r.name << "\""
         << ", type = " << static_cast<uint32_t>(r.type)
         << ", data = [ ";

@@ -237,25 +237,34 @@ void EditorWindow::updateTreeModel() {
     restraintsItem->setChild(0, displacementsItem);
 
     for (const auto &force: m_forces) {
-        QStandardItem *fItem = new QStandardItem(force.name.c_str());
-        forcesItem->setChild(force.id - 1, 0, fItem);
+        QStandardItem *item = new QStandardItem(!force.name.empty() ? force.name.c_str() : "<no name>");
+        forcesItem->setChild(force.id - 1, 0, item);
         forcesItem->setChild(force.id - 1, 1, new QStandardItem(QString::number(force.id)));
         forcesItem->setChild(force.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(force.type))));
-        fItem->setData(static_cast<uint32_t>(force.id), static_cast<int>(ItemRole::ID));
-        fItem->setData(static_cast<uint32_t>(force.type), static_cast<int>(ItemRole::Type));
-        fItem->setData(static_cast<uint32_t>(BCType::Load), static_cast<int>(ItemRole::BType));
+        item->setData(static_cast<uint32_t>(force.id), static_cast<int>(ItemRole::ID));
+        item->setData(static_cast<uint32_t>(force.type), static_cast<int>(ItemRole::Type));
+        item->setData(static_cast<uint32_t>(BCType::Load), static_cast<int>(ItemRole::BType));
     }
 
     for (const auto &pressure: m_pressures) {
-        QStandardItem *fItem = new QStandardItem(pressure.name.c_str());
-        forcesItem->setChild(pressure.id - 1, 0, fItem);
-        forcesItem->setChild(pressure.id - 1, 1, new QStandardItem(QString::number(pressure.id)));
-        forcesItem->setChild(pressure.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(pressure.type))));
-        fItem->setData(static_cast<uint32_t>(pressure.id), static_cast<int>(ItemRole::ID));
-        fItem->setData(static_cast<uint32_t>(pressure.type), static_cast<int>(ItemRole::Type));
-        fItem->setData(static_cast<uint32_t>(BCType::Pressure), static_cast<int>(ItemRole::BType));
+        QStandardItem *item = new QStandardItem(!pressure.name.empty() ? pressure.name.c_str() : "<no name>");
+        pressuresItem->setChild(pressure.id - 1, 0, item);
+        pressuresItem->setChild(pressure.id - 1, 1, new QStandardItem(QString::number(pressure.id)));
+        pressuresItem->setChild(pressure.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(pressure.type))));
+        item->setData(static_cast<uint32_t>(pressure.id), static_cast<int>(ItemRole::ID));
+        item->setData(static_cast<uint32_t>(pressure.type), static_cast<int>(ItemRole::Type));
+        item->setData(static_cast<uint32_t>(BCType::Pressure), static_cast<int>(ItemRole::BType));
     }
-    /* TODO: add pressures & displacements handling */
+
+    for (const auto &displ: m_displacements) {
+        QStandardItem *item = new QStandardItem(!displ.name.empty() ? displ.name.c_str() : "<no name>");
+        displacementsItem->setChild(displ.id - 1, 0, item);
+        displacementsItem->setChild(displ.id - 1, 1, new QStandardItem(QString::number(displ.id)));
+        displacementsItem->setChild(displ.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(displ.type))));
+        item->setData(static_cast<uint32_t>(displ.id), static_cast<int>(ItemRole::ID));
+        item->setData(static_cast<uint32_t>(displ.type), static_cast<int>(ItemRole::Type));
+        item->setData(static_cast<uint32_t>(BCType::Displacement), static_cast<int>(ItemRole::BType));
+    }
 }
 
 void EditorWindow::selectItem(const QModelIndex &idx) {
@@ -271,13 +280,8 @@ void EditorWindow::selectItem(const QModelIndex &idx) {
                 if (el.type == t && el.id == id) {
                     v = el.data;
                     std::clog
-                        << "Selected item: { name = " << el.name
-                        << ", id = " << id
-                        << ", type = " << static_cast<uint32_t>(t) << ", data = [ ";
-                    for (const auto &vel : v) {
-                        std::clog << vel << " ";
-                    }
-                    std::clog << "] }\n";
+                        << "Selected item: "
+                        << el << '\n';
 
                     //sendDataToSettingsWidget<bc::ProjectionVector>(v);
                 }
@@ -322,7 +326,7 @@ void EditorWindow::loadParsedData() {
     if (!m_forces.empty()) {
         std::clog << "forces: {\n";
         for (const auto &force : m_forces) {
-            std::clog << force << ",\n";
+            std::clog << "\t" << force << ",\n";
         }
         std::clog << "}\n";
     }

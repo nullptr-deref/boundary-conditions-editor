@@ -69,7 +69,7 @@ std::vector<T> bc::BoundaryConditionsParser::parse() const {
             if (m_object->contains(accessor)) {
                 for (const auto &obj : (*m_object)[accessor]) {
                     const auto &flags = obj["flag"];
-                    switch((*std::find_if(flags.cbegin(), flags.cend(), [](auto &val) { return val != 0; })).template get<uint32_t>()) {
+                    switch((*std::find_if(flags.cbegin(), flags.cend(), [](auto &val) { return val == static_cast<uint32_t>(RestraintType::Displacement); })).template get<uint32_t>()) {
                         case static_cast<uint32_t>(RestraintType::Displacement):
                             boundaries.push_back(Restraint(RestraintType::Displacement, obj));
                             break;

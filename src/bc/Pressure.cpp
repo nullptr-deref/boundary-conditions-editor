@@ -17,7 +17,7 @@ const json bc::Pressure::serialize() const {
 }
 
 std::ostream &bc::operator<<(std::ostream &o, const bc::Pressure &p) {
-    o << "\t{ id = " << p.id
+    o << "{ id = " << p.id
         << ", name = " << p.name
         << ", type = " << static_cast<uint32_t>(p.type)
         << ", data = " << p.data
