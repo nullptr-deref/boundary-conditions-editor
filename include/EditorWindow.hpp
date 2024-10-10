@@ -122,7 +122,10 @@ private:
     template <typename T>
     void constructSettingsWidget(const T &data);
 
-    std::array<QLineEdit *, 7> m_editors = { nullptr };
+    std::array<QLineEdit *, 13> m_editors = { nullptr };
+    static constexpr size_t FORCE_EDITORS_IDX = 0;
+    static constexpr size_t DISPLACEMENT_EDITORS_IDX = 6;
+    static constexpr size_t PRESSURE_EDITOR_IDX = 12;
     std::array<QCheckBox *, 6> m_checks = { nullptr };
 
     bool m_fileCurrentlyOpened = false;
@@ -168,10 +171,8 @@ void EditorWindow::constructSettingsWidget(const T &data) {
         if (!m_forcesSettingsWidget) {
             constructForcesWidget();
         }
-        size_t i = 0;
-        for (auto *e : m_editors) {
-            e->setText(QString::number(data[i]));
-            i++;
+        for (size_t i = 0; i < 6; i++) {
+            m_editors[i]->setText(QString::number(data[FORCE_EDITORS_IDX + i]));
         }
         m_currentSettingsWidget = m_forcesSettingsWidget;
     }
@@ -179,7 +180,7 @@ void EditorWindow::constructSettingsWidget(const T &data) {
         if (!m_pressuresSettingsWidget) {
             constructPressuresWidget();
         }
-        m_editors.back()->setText(QString::number(data));
+        m_editors[PRESSURE_EDITOR_IDX]->setText(QString::number(data));
         m_currentSettingsWidget = m_pressuresSettingsWidget;
     }
     // Passing two 6-element vectors to deal with displacements
@@ -187,13 +188,12 @@ void EditorWindow::constructSettingsWidget(const T &data) {
         if (!m_displacementsSettingsWidget) {
             constructDisplacementsWidget();
         }
-        size_t i = 0;
         disconnectCheckBoxes();
-        for (auto *e : m_editors) {
-            e->setText(QString::number(data.first[i]));
-            i++;
+        for (size_t i = 0; i < 6; i++) {
+            m_editors[DISPLACEMENT_EDITORS_IDX + i]->setText(QString::number(data.first[i]));
         }
-        i = 0;
+
+        size_t i = 0;
         for (auto *c: m_checks) {
             c->setCheckState(data.second[i] == 0 ? Qt::Unchecked : Qt::Checked);
             i++;

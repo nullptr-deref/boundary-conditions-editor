@@ -455,8 +455,8 @@ void EditorWindow::constructForcesWidget() {
     size_t i = 0;
     for (const auto &label : labels) {
         grid->addWidget(new QLabel(label), 0, i + 1);
-        grid->addWidget(m_editors[i], 1, i + 1); // linear component
-        grid->addWidget(m_editors[i + 3], 2, i + 1); // rotary component
+        grid->addWidget(m_editors[FORCE_EDITORS_IDX + i], 1, i + 1); // linear component
+        grid->addWidget(m_editors[FORCE_EDITORS_IDX + i + 3], 2, i + 1); // rotary component
         i++;
     }
     grid->setSpacing(10);
@@ -479,7 +479,7 @@ void EditorWindow::constructPressuresWidget() {
         initializeSettingsEditors();
     }
 
-    grid->addWidget(m_editors.back()); // linear component
+    grid->addWidget(m_editors[PRESSURE_EDITOR_IDX]); // linear component
 
     l->addLayout(grid);
     l->addStretch();
@@ -506,13 +506,13 @@ void EditorWindow::constructDisplacementsWidget() {
         QHBoxLayout *l1 = new QHBoxLayout;
         l1->addWidget(m_checks[i]);
         l1->addSpacing(8);
-        l1->addWidget(m_editors[i]);
+        l1->addWidget(m_editors[DISPLACEMENT_EDITORS_IDX + i]);
         l1->addWidget(new QLabel(tr("mm")));
 
         QHBoxLayout *l2 = new QHBoxLayout;
         l2->addWidget(m_checks[i + 3]);
         l2->addSpacing(8);
-        l2->addWidget(m_editors[i + 3]);
+        l2->addWidget(m_editors[DISPLACEMENT_EDITORS_IDX + i + 3]);
         l2->addWidget(new QLabel(tr("deg")));
 
         grid->addWidget(new QLabel(label), 0, i + 1);
