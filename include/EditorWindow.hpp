@@ -18,13 +18,15 @@ using json = nlohmann::json;
 
 #include <array>
 #include <fstream>
-#include <map>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
 
 constexpr const char *WINDOW_NAME = "Boundary Conditions Editor";
+
+constexpr size_t DEFAULT_WIDTH = 1080;
+constexpr size_t DEFAULT_HEIGHT = 720;
 
 class EditorWindow : public QMainWindow {
     Q_OBJECT

@@ -19,16 +19,3 @@ public:
 protected:
     json p_json;
 };
-
-/*
-template <typename T>
-struct JSONSerializer {
-    static const T deserialize(const JSONSerializable<T> &j) {
-        return j.deserialize();
-    }
-
-    static json serialize(JSONSerializable<T> &j) {
-        return j.serialize();
-    }
-};
-*/

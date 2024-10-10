@@ -25,7 +25,7 @@ const json bc::Load::serialize() const {
 
 std::ostream &bc::operator<<(std::ostream &o, const bc::Load &l) {
     o << "{ id = " << l.id
-        << ", name = " << l.name
+        << ", name = \"" << l.name << '\"'
         << ", type = " << static_cast<uint32_t>(l.type)
         << ", data = [ ";
     for (const auto &el : l.data) {

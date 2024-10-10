@@ -8,6 +8,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QHeaderView>
 #include <QStandardPaths>
 #include <QScrollArea>
 #include <QVBoxLayout>
@@ -31,6 +32,8 @@ EditorWindow::EditorWindow(QWidget *parent) {
 
     m_treeView = new QTreeView();
     m_treeView->setModel(m_model);
+    m_treeView->header()->setSectionResizeMode(QHeaderView::Stretch);
+    m_treeView->header()->setCascadingSectionResizes(true);
 
     QHBoxLayout *upperLayout = new QHBoxLayout;
     upperLayout->addWidget(m_treeView);
@@ -64,6 +67,8 @@ EditorWindow::EditorWindow(QWidget *parent) {
     connect(m_treeView, &QTreeView::clicked, this, &EditorWindow::selectItem);
 
     centralWidget->setLayout(mainLayout);
+
+    resize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 }
 
 EditorWindow::~EditorWindow() {}
@@ -273,48 +278,42 @@ void EditorWindow::selectItem(const QModelIndex &idx) {
     auto *item = m_model->itemFromIndex(idx);
     switch(static_cast<uint32_t>(item->data(static_cast<int>(ItemRole::BType)).toInt())) {
         case static_cast<uint32_t>(BCType::Load): {
-            bc::ProjectionVector v;
             const auto t = static_cast<bc::LoadType>(item->data(static_cast<int>(ItemRole::Type)).toInt());
             const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
             for (auto &el : m_forces) {
                 if (el.type == t && el.id == id) {
-                    v = el.data;
-                    std::clog
-                        << "Selected item: "
-                        << el << '\n';
+                    bc::ProjectionVector &v = el.data;
+                    std::clog << "Selected item: " << el << '\n';
 
                     //sendDataToSettingsWidget<bc::ProjectionVector>(v);
                 }
             }
         } break;
         case static_cast<uint32_t>(BCType::Pressure): {
-            double magnitude;
             const auto t = static_cast<bc::PressureType>(item->data(static_cast<int>(ItemRole::Type)).toInt());
             const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
             for (auto &el : m_pressures) {
                 if (el.type == t && el.id == id) {
-                    magnitude = el.data;
-                    std::clog
-                        << "Selected item: { name = " << el.name
-                        << ", id = " << id
-                        << ", type = " << static_cast<uint32_t>(t)
-                        << ", data = " << magnitude
-                        << " }\n";
+                    double &magnitude = el.data;
+                    std::clog << "Selected item: " << el << '\n';
 
                     //sendDataToSettingsWidget<bc::ProjectionVector>(v);
                 }
             }
         } break;
         case static_cast<uint32_t>(BCType::Displacement): {
+            const auto t = static_cast<bc::RestraintType>(item->data(static_cast<int>(ItemRole::Type)).toInt());
+            const auto id = static_cast<size_t>(item->data(static_cast<int>(ItemRole::ID)).toInt());
+            for (auto &el : m_displacements) {
+                if (el.type == t && el.id == id) {
+                    bc::ProjectionVector v = el.data;
+                    std::clog << "Selected item: " << el << '\n';
 
+                    //sendDataToSettingsWidget<bc::ProjectionVector>(v);
+                }
+            }
         } break;
     }
-
-    /* TODO: rewrite
-    auto *item = m_model->itemFromIndex(idx);
-    for (const auto *bc : m_boundaryConditions) {
-    }
-    */
 }
 
 void EditorWindow::loadParsedData() {
