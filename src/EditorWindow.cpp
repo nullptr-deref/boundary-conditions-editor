@@ -475,7 +475,7 @@ void EditorWindow::constructForcesWidget() {
         i++;
     }
     grid->setSpacing(10);
-    grid->addWidget(new QLabel(tr("mm")), 1, i + 1);
+    grid->addWidget(new QLabel(tr("N")), 1, i + 1);
     grid->addWidget(new QLabel(tr("Nm")), 2, i + 1);
 
     l->addLayout(grid);
