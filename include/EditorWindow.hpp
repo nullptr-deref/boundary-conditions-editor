@@ -131,7 +131,7 @@ private:
     bool m_fileCurrentlyOpened = false;
 
 private slots:
-    void updateTitleText(const std::string_view &sv);
+    void updateTitleText(const std::string_view &sv = std::string_view(""));
     void updateCounter(size_t bcCount = 0);
 
     void selectItem(const QModelIndex &idx);

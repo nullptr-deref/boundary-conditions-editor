@@ -80,7 +80,7 @@ EditorWindow::EditorWindow(QWidget *parent) {
 EditorWindow::~EditorWindow() {}
 
 void EditorWindow::updateTitleText(const std::string_view &sv) {
-    const std::string updatedTitle = std::string(WINDOW_NAME) + std::string(" | ") + std::string(sv);
+    const std::string updatedTitle = std::string(WINDOW_NAME) + (!sv.empty() ? std::string(" | ") + std::string(sv) : std::string(""));
     this->setWindowTitle(updatedTitle.c_str());
 }
 
@@ -136,7 +136,6 @@ void EditorWindow::selectAndOpenFile() {
     }
 }
 
-// TODO: implement
 void EditorWindow::closeFile() {
     if (m_inputFilestream.is_open()) {
         m_inputFilestream.close();
@@ -146,7 +145,11 @@ void EditorWindow::closeFile() {
 
         m_filename.clear();
         m_model->clear();
-        m_currentSettingsWidget->hide();
+        if (m_currentSettingsWidget) {
+            m_currentSettingsWidget->hide();
+        }
+        
+	updateTitleText("");
     }
 }
 
@@ -201,7 +204,6 @@ void EditorWindow::exportFile() {
     }
 }
 
-// TODO: implement
 void EditorWindow::quit() {
     close();
 }
