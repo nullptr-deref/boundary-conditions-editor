@@ -264,14 +264,16 @@ void EditorWindow::updateTreeModel() {
 
     restraintsItem->setChild(0, displacementsItem);
 
+    size_t i = 0;
     for (const auto &force: m_forces) {
         QStandardItem *item = new QStandardItem(!force.name.empty() ? force.name.c_str() : "<no name>");
-        forcesItem->setChild(force.id - 1, 0, item);
-        forcesItem->setChild(force.id - 1, 1, new QStandardItem(QString::number(force.id)));
-        forcesItem->setChild(force.id - 1, 2, new QStandardItem(QString::number(static_cast<uint32_t>(force.type))));
+        forcesItem->setChild(i, 0, item);
+        forcesItem->setChild(i, 1, new QStandardItem(QString::number(force.id)));
+        forcesItem->setChild(i, 2, new QStandardItem(QString::number(static_cast<uint32_t>(force.type))));
         item->setData(static_cast<uint32_t>(force.id), static_cast<int>(ItemRole::ID));
         item->setData(static_cast<uint32_t>(force.type), static_cast<int>(ItemRole::Type));
         item->setData(static_cast<uint32_t>(BCType::Load), static_cast<int>(ItemRole::BType));
+        i++;
     }
 
     for (const auto &pressure: m_pressures) {
