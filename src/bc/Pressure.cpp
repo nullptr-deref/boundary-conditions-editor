@@ -11,7 +11,8 @@ const json bc::Pressure::serialize() const {
     json copy = p_json;
 
     copy["name"] = name;
-    copy["data"] = json::array({ data });
+    copy["data"] = json::array();
+    copy["data"].push_back(json::array({ data }));
 
     return copy;
 }
