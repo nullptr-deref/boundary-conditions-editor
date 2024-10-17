@@ -50,6 +50,13 @@ private:
         "&Export",
         "&Quit"
     };
+    std::array<QKeySequence, 5> m_shortcuts = {
+        QKeySequence(QKeySequence::Open),
+        QKeySequence(QKeySequence::Close),
+        QKeySequence(QKeySequence(tr("Ctrl+R"))),
+        QKeySequence(QKeySequence::SaveAs),
+        QKeySequence(QKeySequence::Quit)
+    };
 
     std::shared_ptr<QAction> m_openFileAction = nullptr;
     std::shared_ptr<QAction> m_closeFileAction = nullptr;

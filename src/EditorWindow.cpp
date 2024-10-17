@@ -213,6 +213,7 @@ void EditorWindow::prepareInternalActions() {
     for (auto &a : m_actions) {
         a = std::make_shared<QAction>();
         a->setText(m_actionNames[i].c_str());
+        a->setShortcut(m_shortcuts[i]);
         connect(a.get(), &QAction::triggered, this, m_signals[i]);
         i++;
     }
@@ -276,6 +277,9 @@ void EditorWindow::updateTreeModel() {
         i++;
     }
 
+    // The following code writes items to tree view by their ids.
+    // Be aware that if there's more than exactly one type of boundary condition in the section,
+    // then it overwrite boundary conditions with the same ids.
     for (const auto &pressure: m_pressures) {
         QStandardItem *item = new QStandardItem(!pressure.name.empty() ? pressure.name.c_str() : "<no name>");
         pressuresItem->setChild(pressure.id - 1, 0, item);
@@ -369,7 +373,7 @@ void EditorWindow::loadParsedData() {
     if (!m_pressures.empty()) {
         std::clog << "pressures: {\n";
         for (const auto &pr : m_pressures) {
-            std::clog << pr << ",\n";
+            std::clog << "\t" << pr << ",\n";
         }
         std::clog << "}\n";
     }
@@ -378,7 +382,7 @@ void EditorWindow::loadParsedData() {
     if (!m_displacements.empty()) {
         std::clog << "displacements: {\n";
         for (const auto &d : m_displacements) {
-            std::clog << d << ",\n";
+            std::clog << "\t" << d << ",\n";
         }
         std::clog << "}\n";
     }
